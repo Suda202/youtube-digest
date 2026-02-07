@@ -7,6 +7,8 @@
 扫码加入飞书群，直接看每天的推荐效果：
 
 <img src="feishu-group-qr.png" width="280" alt="飞书体验群二维码">
+![Uploading image.png…]()
+
 
 ## 核心逻辑：三阶段流水线
 
