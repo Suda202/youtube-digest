@@ -136,6 +136,6 @@ python main.py
 
 - **YouTube Data API**：免费配额（每日 10,000 quota，每次视频详情查询消耗 3 quota）
 - **MiniMax API**：按 token 计费，每日约 ¥0.1-0.3（摘要 5 次）
-- **Gemini API**：免费额度充足（排序 1 次/天）
+- **Gemini API**：按 token 计费，每日仅 1 次排序调用，费用极低
 - **飞书 API**：免费
 - **GitHub Actions**：公开仓库免费，私有仓库每月 2000 分钟免费额度
