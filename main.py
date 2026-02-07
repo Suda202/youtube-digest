@@ -28,6 +28,7 @@ MIN_DURATION_MINUTES = int(os.environ.get("MIN_DURATION_MINUTES", "3"))  # 过�
 TOP_N = int(os.environ.get("TOP_N", "5"))  # 每日推送 Top N 视频
 LOOKBACK_HOURS = int(os.environ.get("LOOKBACK_HOURS", "24"))
 CHANNELS_FILE = os.environ.get("CHANNELS_FILE", "channels.json")
+PROFILE_FILE = os.environ.get("PROFILE_FILE", "profile.json")
 HISTORY_FILE = os.environ.get("HISTORY_FILE", "history.json")
 HISTORY_MAX_DAYS = int(os.environ.get("HISTORY_MAX_DAYS", "30"))
 
@@ -38,6 +39,21 @@ def load_channels() -> list[dict]:
     if not path.exists():
         print(f"❌ {CHANNELS_FILE} not found")
         return []
+    with open(path) as f:
+        return json.load(f)
+
+
+def load_profile() -> dict:
+    """加载用户画像配置"""
+    path = Path(PROFILE_FILE)
+    if not path.exists():
+        print(f"⚠️ {PROFILE_FILE} not found, using defaults")
+        return {
+            "description": "科技行业从业者",
+            "favorite_content": "深度访谈、技术分享",
+            "preferred_channels": [],
+            "exclude_title_patterns": ["full course", "tutorial for beginners"],
+        }
     with open(path) as f:
         return json.load(f)
 
@@ -288,7 +304,7 @@ def call_gemini(prompt: str) -> str | None:
         return None
 
 
-def rank_candidates(candidates: list[dict], top_n: int) -> list[dict]:
+def rank_candidates(candidates: list[dict], top_n: int, profile: dict) -> list[dict]:
     """用 LLM 从候选视频中挑选最值得深度观看的 Top N，返回 [{index, reason}]"""
     video_list = []
     for i, v in enumerate(candidates):
@@ -299,12 +315,14 @@ def rank_candidates(candidates: list[dict], top_n: int) -> list[dict]:
             f"{i+1}. [{v['author']}] {v['title']} ({v['duration_str']}, {format_view_count(v['view_count'])} views){desc_snippet}"
         )
 
-    prompt = f"""你是一个 AI/科技行业从业者的视频筛选助手。请严格按照以下标准筛选。
+    preferred = ", ".join(profile.get("preferred_channels", []))
+
+    prompt = f"""你是一个视频筛选助手。请严格按照以下标准筛选。
 
 用户画像：
-- AI 行业从业者，关注 AI 技术前沿、创业、投资、产品策略
-- 常看频道：AI Engineer, Lenny's Podcast, a16z, Dwarkesh Patel, Lex Fridman, Acquired, Latent Space, No Priors, Andrej Karpathy, Peter Yang, Hamel Husain, Y Combinator, 硅谷101播客, 張小珺Xiaojùn Podcast, OpenAI, Anthropic, Google DeepMind, Sequoia, 20VC
-- 最喜欢的内容类型：创始人/研究者深度访谈、行业大会演讲（AI Engineer Summit, 微软/Google/Figma 大会等）、技术架构深度讨论
+- {profile.get("description", "科技行业从业者")}
+- 常看频道：{preferred}
+- 最喜欢的内容类型：{profile.get("favorite_content", "深度访谈、技术分享")}
 
 以下是今天的 {len(candidates)} 个候选视频：
 
@@ -494,6 +512,7 @@ def main():
         print("❌ 无频道配置，退出")
         return
 
+    profile = load_profile()
     history = load_history()
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -558,27 +577,20 @@ def main():
 
     # 第二阶段：预过滤 + LLM 智能筛选
     # 硬规则预过滤：剔除明显不符合的候选
-    PREFERRED_CHANNELS = {
-        "AI Engineer", "Lenny's Podcast", "a16z", "Dwarkesh Patel", "Lex Fridman",
-        "Acquired", "Latent Space", "No Priors", "Andrej Karpathy", "Peter Yang",
-        "Hamel Husain", "Y Combinator", "硅谷101播客", "張小珺Xiaojùn Podcast",
-        "OpenAI", "Anthropic", "Google DeepMind", "Sequoia Capital", "20VC",
-        "Greg Isenberg", "Cognitive Revolution", "Machine Learning Street Talk",
-        "Weights & Biases", "LlamaIndex", "LangChain", "Weaviate", "Stanford Online",
-        "Deep Learning AI", "Figma",
-    }
-    EXCLUDE_TITLE_PATTERNS = re.compile(
-        r"(?i)(full course|tutorial for beginners|从零开始|入门教程)", re.IGNORECASE
-    )
+    preferred_channels = set(profile.get("preferred_channels", []))
+    exclude_patterns = profile.get("exclude_title_patterns", [])
+    exclude_re = re.compile(
+        r"(?i)(" + "|".join(re.escape(p) for p in exclude_patterns) + ")"
+    ) if exclude_patterns else None
 
     filtered = []
     for v in candidates:
         # 排除入门教程/全课程
-        if EXCLUDE_TITLE_PATTERNS.search(v["title"]):
+        if exclude_re and exclude_re.search(v["title"]):
             print(f"   ⛔ 预过滤（教程）: {v['title']}")
             continue
         # 播放量极低且不是常看频道 → 排除
-        is_preferred = any(pc.lower() in v["author"].lower() for pc in PREFERRED_CHANNELS)
+        is_preferred = any(pc.lower() in v["author"].lower() for pc in preferred_channels)
         if v["view_count"] < 200 and not is_preferred:
             print(f"   ⛔ 预过滤（低播放量非常看频道）: {v['title']} ({format_view_count(v['view_count'])} views)")
             continue
@@ -593,7 +605,7 @@ def main():
         print(f"   📋 预过滤: {len(candidates)} → {len(filtered)} 个候选")
 
     print(f"\n🤖 LLM 正在从 {len(filtered)} 个候选中筛选 Top {TOP_N}...")
-    ranked = rank_candidates(filtered, TOP_N)
+    ranked = rank_candidates(filtered, TOP_N, profile)
     top_videos = [filtered[r["index"]] for r in ranked]
     # 把推荐理由挂到 video 上
     for r, v in zip(ranked, top_videos):

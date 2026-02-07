@@ -1,0 +1,20 @@
+{
+  "description": "AI/科技行业从业者，关注 AI 技术前沿、创业、投资、产品策略",
+  "favorite_content": "创始人/研究者深度访谈、行业大会演讲（AI Engineer Summit 等）、技术架构深度讨论",
+  "preferred_channels": [
+    "AI Engineer",
+    "Lenny's Podcast",
+    "a16z",
+    "Lex Fridman",
+    "Y Combinator",
+    "Andrej Karpathy",
+    "OpenAI",
+    "Anthropic"
+  ],
+  "exclude_title_patterns": [
+    "full course",
+    "tutorial for beginners",
+    "从零开始",
+    "入门教程"
+  ]
+}
