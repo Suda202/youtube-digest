@@ -18,12 +18,18 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          curl -fsSL https://deno.land/install.sh | sh
+          echo "$HOME/.deno/bin" >> $GITHUB_PATH
 
       - name: Restore history
         continue-on-error: true
         run: |
           git checkout origin/data -- history.json 2>/dev/null || echo '[]' > history.json
+
+      - name: Restore YouTube cookies
+        run: echo "${{ secrets.YT_COOKIES_BASE64 }}" | base64 -d > cookies.txt
 
       - name: Run digest
         env:
@@ -33,6 +39,7 @@ jobs:
           MINIMAX_API_KEY: ${{ secrets.MINIMAX_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YT_COOKIES_FILE: cookies.txt
         run: python main.py
 
       - name: Save history
