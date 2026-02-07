@@ -2,6 +2,12 @@
 
 每日自动扫描 YouTube 订阅频道，用 LLM 智能筛选最值得深度观看的长视频，生成中文摘要，推送到飞书个人消息。
 
+### 体验每日推送
+
+扫码加入飞书群，直接看每天的推荐效果：
+
+<img src="feishu-group-qr.png" width="280" alt="飞书体验群二维码">
+
 ## 核心逻辑：三阶段流水线
 
 ```
@@ -66,9 +72,12 @@ YouTube Data API            输出 Top N + 推荐理由            MiniMax 生�
 
 ```
 ├── main.py                          # 核心脚本（三阶段流水线）
-├── channels.json                    # 76 个订阅频道（channel_id + name）
+├── channels.example.json            # 频道列表模板（5 个示例）
+├── channels.json                    # 你的真实频道列表（gitignored，从 example 复制）
+├── profile.example.json             # 用户画像模板（示例偏好）
+├── profile.json                     # 你的真实偏好（gitignored，从 example 复制）
+├── history.json                     # 已处理视频 ID（gitignored，运行时自动生成）
 ├── requirements.txt                 # 依赖：requests, yt-dlp, google-genai
-├── history.json                     # 已处理视频 ID + 时间戳（运行时生成，自动清理 30 天前记录）
 ├── .github/workflows/digest.yml     # GitHub Actions 定时任务
 ├── FEISHU_APP_SETUP.md              # 飞书应用配置指南
 ├── GET_USER_ID.md                   # 获取飞书 User ID 指南
@@ -96,15 +105,22 @@ YouTube Data API            输出 Top N + 推荐理由            MiniMax 生�
 ### GitHub Actions（推荐）
 
 1. Fork 本仓库
-2. Settings → Secrets → Actions → 添加 6 个必填环境变量（FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_USER_ID, MINIMAX_API_KEY, GEMINI_API_KEY, YOUTUBE_API_KEY）
-3. Actions → YouTube Digest Daily → Run workflow 手动测试
-4. 之后每天北京时间 10:00 (UTC 02:00) 自动运行
-5. `history.json` 自动保存在 `data` 分支，跨次运行去重
+2. 复制配置模板并填入你的偏好：
+   ```bash
+   cp channels.example.json channels.json   # 编辑添加你关注的频道
+   cp profile.example.json profile.json     # 编辑填入你的兴趣画像
+   ```
+3. Settings → Secrets → Actions → 添加 6 个必填环境变量（FEISHU_APP_ID, FEISHU_APP_SECRET, FEISHU_USER_ID, MINIMAX_API_KEY, GEMINI_API_KEY, YOUTUBE_API_KEY）
+4. Actions → YouTube Digest Daily → Run workflow 手动测试
+5. 之后每天北京时间 10:00 (UTC 02:00) 自动运行
+6. `channels.json`、`profile.json`、`history.json` 自动保存在 `data` 分支，跨次运行持久化
 
 ### 本地运行
 
 ```bash
 pip install -r requirements.txt
+cp channels.example.json channels.json   # 编辑添加你的频道
+cp profile.example.json profile.json     # 编辑填入你的偏好
 
 export FEISHU_APP_ID="cli_xxxxx"
 export FEISHU_APP_SECRET="xxxxx"
