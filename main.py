@@ -19,6 +19,7 @@ from pathlib import Path
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_USER_ID = os.environ.get("FEISHU_USER_ID", "")  # 目标用户 ID (ou_xxxxx)
+FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")  # 群机器人 Webhook
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 MINIMAX_API_BASE = os.environ.get("MINIMAX_API_BASE", "https://api.minimaxi.com/anthropic")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -401,6 +402,27 @@ def format_view_count(count: int) -> str:
     return str(count)
 
 
+def build_digest_content(videos_with_summaries: list[dict]) -> tuple[str, list]:
+    """构建日报消息内容，返回 (title, content_lines)"""
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    content_lines = []
+
+    for i, item in enumerate(videos_with_summaries, 1):
+        v = item["video"]
+        summary = item["summary"]
+        view_str = format_view_count(v["view_count"])
+        content_lines.append([{"tag": "text", "text": f"\n{'─' * 30}\n"}])
+        content_lines.append([{"tag": "text", "text": f"#{i}  📺 {v['author']}  |  ⏱ {v['duration_str']}  |  👀 {view_str} views\n"}])
+        reason = v.get("reason", "")
+        if reason:
+            content_lines.append([{"tag": "text", "text": f"💡 {reason}\n"}])
+        content_lines.append([{"tag": "a", "text": f"🔗 {v['title']}", "href": v["url"]}])
+        content_lines.append([{"tag": "text", "text": f"\n\n{summary}\n"}])
+
+    title = f"📹 YouTube 今日推荐 ({today})"
+    return title, content_lines
+
+
 def send_digest_to_feishu(videos_with_summaries: list[dict]):
     """发送合并的日报消息到飞书（单条推送）"""
     if not FEISHU_APP_ID or not FEISHU_APP_SECRET or not FEISHU_USER_ID:
@@ -414,28 +436,8 @@ def send_digest_to_feishu(videos_with_summaries: list[dict]):
         print("  ❌ 无法获取飞书 access token")
         return
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    content_lines = []
-
-    for i, item in enumerate(videos_with_summaries, 1):
-        v = item["video"]
-        summary = item["summary"]
-        view_str = format_view_count(v["view_count"])
-        # 每个视频一个区块
-        content_lines.append([{"tag": "text", "text": f"\n{'─' * 30}\n"}])
-        content_lines.append([{"tag": "text", "text": f"#{i}  📺 {v['author']}  |  ⏱ {v['duration_str']}  |  👀 {view_str} views\n"}])
-        reason = v.get("reason", "")
-        if reason:
-            content_lines.append([{"tag": "text", "text": f"💡 {reason}\n"}])
-        content_lines.append([{"tag": "a", "text": f"🔗 {v['title']}", "href": v["url"]}])
-        content_lines.append([{"tag": "text", "text": f"\n\n{summary}\n"}])
-
-    content = {
-        "zh_cn": {
-            "title": f"📹 YouTube 今日推荐 ({today})",
-            "content": content_lines
-        }
-    }
+    title, content_lines = build_digest_content(videos_with_summaries)
+    content = {"zh_cn": {"title": title, "content": content_lines}}
 
     body = {
         "receive_id": FEISHU_USER_ID,
@@ -453,11 +455,33 @@ def send_digest_to_feishu(videos_with_summaries: list[dict]):
         resp = requests.post(url, headers=headers, json=body, timeout=10)
         result = resp.json()
         if result.get("code") == 0:
-            print(f"  ✅ 飞书日报推送成功 ({len(videos_with_summaries)} 个视频)")
+            print(f"  ✅ 飞书个人推送成功 ({len(videos_with_summaries)} 个视频)")
         else:
-            print(f"  ❌ 飞书推送失败: {result}")
+            print(f"  ❌ 飞书个人推送失败: {result}")
     except Exception as e:
-        print(f"  ❌ 飞书推送异常: {e}")
+        print(f"  ❌ 飞书个人推送异常: {e}")
+
+
+def send_digest_to_webhook(videos_with_summaries: list[dict]):
+    """通过 Webhook 发送日报到飞书群"""
+    if not FEISHU_WEBHOOK_URL:
+        return
+
+    title, content_lines = build_digest_content(videos_with_summaries)
+    body = {
+        "msg_type": "post",
+        "content": {"post": {"zh_cn": {"title": title, "content": content_lines}}}
+    }
+
+    try:
+        resp = requests.post(FEISHU_WEBHOOK_URL, json=body, timeout=10)
+        result = resp.json()
+        if result.get("StatusCode") == 0:
+            print(f"  ✅ 飞书群 Webhook 推送成功 ({len(videos_with_summaries)} 个视频)")
+        else:
+            print(f"  ❌ 飞书群 Webhook 推送失败: {result}")
+    except Exception as e:
+        print(f"  ❌ 飞书群 Webhook 推送异常: {e}")
 
 
 # ============ 主流程 ============
@@ -601,6 +625,7 @@ def main():
 
     # 合并为一条日报推送
     send_digest_to_feishu(videos_with_summaries)
+    send_digest_to_webhook(videos_with_summaries)
 
     # 未入选的也标记为已处理
     for video in candidates:
