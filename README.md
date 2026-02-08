@@ -2,6 +2,13 @@
 
 每日自动扫描 YouTube 订阅频道，用 LLM 智能筛选最值得深度观看的长视频，生成中文摘要，推送到飞书个人消息。
 
+### 体验每日推送
+
+扫码加入飞书群，直接看每天的推荐效果：
+
+<img src="feishu-group-qr.png" width="280" alt="飞书体验群二维码">
+<img width="2304" height="1810" alt="image" src="https://github.com/user-attachments/assets/9540f55d-43e4-4e2e-bd53-d3b2c0592610" />
+
 ## 核心逻辑：三阶段流水线
 
 ```
