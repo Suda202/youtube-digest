@@ -26,10 +26,14 @@ jobs:
           curl -fsSL https://deno.land/install.sh | sh
           echo "$HOME/.deno/bin" >> $GITHUB_PATH
 
-      - name: Restore history
+      - name: Restore data from data branch
         continue-on-error: true
         run: |
-          git checkout origin/data -- history.json 2>/dev/null || echo '[]' > history.json
+          git fetch origin data 2>/dev/null || true
+          git checkout origin/data -- channels.json profile.json history.json 2>/dev/null || true
+          [ -f channels.json ] || cp channels.example.json channels.json
+          [ -f profile.json ] || cp profile.example.json profile.json
+          [ -f history.json ] || echo '{}' > history.json
 
       - name: Restore YouTube cookies
         run: echo "${{ secrets.YT_COOKIES_BASE64 }}" | base64 -d > cookies.txt
@@ -46,11 +50,11 @@ jobs:
           YT_COOKIES_FILE: cookies.txt
         run: python main.py
 
-      - name: Save history
+      - name: Save data to data branch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -B data
-          git add -f history.json
-          git commit -m "update history $(date -u +%Y-%m-%d)" || true
+          git add -f channels.json profile.json history.json
+          git commit -m "update data $(date -u +%Y-%m-%d)" || true
           git push origin data --force
