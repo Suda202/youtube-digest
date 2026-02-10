@@ -5,6 +5,8 @@ on:
     # 每天 UTC 02:00 (北京时间 10:00) 运行
     - cron: '0 2 * * *'
   workflow_dispatch: # 允许手动触发
+  repository_dispatch:
+    types: [daily-digest] # 允许通过 API 触发
 
 permissions:
   contents: write
