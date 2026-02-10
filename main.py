@@ -420,25 +420,40 @@ def format_view_count(count: int) -> str:
     return str(count)
 
 
-def build_digest_content(videos_with_summaries: list[dict]) -> tuple[str, list]:
-    """构建日报消息内容，返回 (title, content_lines)"""
+def build_card_content(videos_with_summaries: list[dict]) -> dict:
+    """构建飞书卡片消息内容，返回卡片 JSON 结构"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    content_lines = []
+    elements = []
 
     for i, item in enumerate(videos_with_summaries, 1):
         v = item["video"]
         summary = item["summary"]
         view_str = format_view_count(v["view_count"])
-        content_lines.append([{"tag": "text", "text": f"\n{'─' * 30}\n"}])
-        content_lines.append([{"tag": "text", "text": f"#{i}  📺 {v['author']}  |  ⏱ {v['duration_str']}  |  👀 {view_str} views\n"}])
+
+        elements.append({"tag": "hr"})
+        elements.append({"tag": "markdown", "content": f"**#{i} {v['title']}**"})
+        elements.append({"tag": "note", "elements": [
+            {"tag": "plain_text", "content": f"📺 {v['author']} · ⏱ {v['duration_str']} · 👀 {view_str} views"}
+        ]})
         reason = v.get("reason", "")
         if reason:
-            content_lines.append([{"tag": "text", "text": f"💡 {reason}\n"}])
-        content_lines.append([{"tag": "a", "text": f"🔗 {v['title']}", "href": v["url"]}])
-        content_lines.append([{"tag": "text", "text": f"\n\n{summary}\n"}])
+            elements.append({"tag": "markdown", "content": f"💡 {reason}"})
+        elements.append({"tag": "markdown", "content": summary})
+        elements.append({"tag": "action", "actions": [{
+            "tag": "button",
+            "text": {"tag": "plain_text", "content": "▶ 观看视频"},
+            "type": "primary",
+            "url": v["url"]
+        }]})
 
-    title = f"📹 YouTube 今日推荐 ({today})"
-    return title, content_lines
+    return {
+        "config": {"wide_screen_mode": True},
+        "header": {
+            "title": {"tag": "plain_text", "content": f"📹 YouTube 今日推荐 ({today})"},
+            "template": "blue"
+        },
+        "elements": elements
+    }
 
 
 def send_digest_to_feishu(videos_with_summaries: list[dict]):
@@ -454,13 +469,12 @@ def send_digest_to_feishu(videos_with_summaries: list[dict]):
         print("  ❌ 无法获取飞书 access token")
         return
 
-    title, content_lines = build_digest_content(videos_with_summaries)
-    content = {"zh_cn": {"title": title, "content": content_lines}}
+    card = build_card_content(videos_with_summaries)
 
     body = {
         "receive_id": FEISHU_USER_ID,
-        "msg_type": "post",
-        "content": json.dumps(content)
+        "msg_type": "interactive",
+        "content": json.dumps(card)
     }
 
     url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=user_id"
@@ -485,10 +499,9 @@ def send_digest_to_webhook(videos_with_summaries: list[dict]):
     if not FEISHU_WEBHOOK_URL:
         return
 
-    title, content_lines = build_digest_content(videos_with_summaries)
     body = {
-        "msg_type": "post",
-        "content": {"post": {"zh_cn": {"title": title, "content": content_lines}}}
+        "msg_type": "interactive",
+        "card": build_card_content(videos_with_summaries)
     }
 
     try:
