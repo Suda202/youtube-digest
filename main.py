@@ -316,6 +316,14 @@ def rank_candidates(candidates: list[dict], top_n: int, profile: dict) -> list[d
         )
 
     preferred = ", ".join(profile.get("preferred_channels", []))
+    deprioritize = profile.get("deprioritize_topics", [])
+    deprioritize_section = ""
+    if deprioritize:
+        topics_str = "、".join(deprioritize)
+        deprioritize_section = f"""
+降低优先级（除非内容特别有深度，否则尽量不选）：
+- 涉及以下话题的内容：{topics_str}
+"""
 
     prompt = f"""你是一个视频筛选助手。请严格按照以下标准筛选。
 
@@ -341,7 +349,7 @@ def rank_candidates(candidates: list[dict], top_n: int, profile: dict) -> list[d
 - 入门教程/全课程（"Full Course", "Tutorial For Beginners", "从零开始"）
 - 与 AI/科技行业无关的内容（情感、健身、烹饪等）
 - 播放量极低（<200）且频道不在用户常看列表中的视频
-
+{deprioritize_section}
 播放量参考规则：同类深度内容中播放量明显更高的优先，但绝不因为播放量高就选新闻速报。
 
 请按推荐度从高到低输出，每行一个，格式为：
