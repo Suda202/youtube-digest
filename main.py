@@ -657,7 +657,6 @@ def main():
         time.sleep(1)
 
     # 合并为一条日报推送
-    send_digest_to_feishu(videos_with_summaries)
     send_digest_to_webhook(videos_with_summaries)
 
     # 未入选的也标记为已处理
