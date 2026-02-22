@@ -1,0 +1,20 @@
+{
+  "description": "AI 产品经理，关注 AI 产品设计、用户体验、商业模式、技术前沿、创业与投资",
+  "favorite_content": "创始人/研究者深度访谈、AI 产品发布与策略分析、行业大会演讲（AI Engineer Summit, 微软/Google/Figma 大会等）、产品增长与商业化讨论、技术架构对产品的影响",
+  "preferred_channels": [
+    "AI Engineer", "Lenny's Podcast", "a16z", "Dwarkesh Patel", "Lex Fridman",
+    "Acquired", "Latent Space", "No Priors", "Andrej Karpathy", "Peter Yang",
+    "Hamel Husain", "Y Combinator", "硅谷101播客", "張小珺Xiaojùn Podcast",
+    "OpenAI", "Anthropic", "Google DeepMind", "Sequoia Capital", "20VC",
+    "Greg Isenberg", "Cognitive Revolution", "Machine Learning Street Talk",
+    "Weights & Biases", "LlamaIndex", "LangChain", "Weaviate", "Stanford Online",
+    "Deep Learning AI", "Figma"
+  ],
+  "exclude_title_patterns": [
+    "full course", "tutorial for beginners", "从零开始", "入门教程"
+  ],
+  "deprioritize_topics": [
+    "自动驾驶", "无人驾驶", "autonomous driving", "self-driving",
+    "机器人", "robotics", "humanoid", "具身智能"
+  ]
+}
