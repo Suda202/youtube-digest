@@ -31,7 +31,9 @@ jobs:
         continue-on-error: true
         run: |
           git fetch origin data 2>/dev/null || true
-          git checkout origin/data -- channels.json profile.json history.json feedback.json ranking_hints.txt 2>/dev/null || true
+          for file in channels.json profile.json history.json feedback.json ranking_hints.txt; do
+            git checkout origin/data -- "$file" 2>/dev/null || true
+          done
           [ -f channels.json ] || cp channels.example.json channels.json
           [ -f profile.json ] || cp profile.example.json profile.json
           [ -f history.json ] || echo '{}' > history.json
