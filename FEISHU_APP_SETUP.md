@@ -1,5 +1,7 @@
 # 飞书开放平台应用配置指南
 
+本项目现在优先使用飞书开放平台应用机器人发送卡片。应用机器人发送的卡片支持点击回调，可用于记录 👍/👎 反馈；群自定义机器人 Webhook 只作为兜底推送通道，不支持点击回调。
+
 ## 一、创建应用
 
 1. 访问 [飞书开放平台](https://open.feishu.cn/app)
@@ -58,27 +60,33 @@ curl -X GET 'https://open.feishu.cn/open-apis/im/v1/chats?page_size=20' \
 # 飞书开放平台应用方式
 export FEISHU_APP_ID="cli_xxxxx"
 export FEISHU_APP_SECRET="xxxxx"
-export FEISHU_CHAT_ID="oc_xxxxx"  # 目标群聊 ID
+export FEISHU_CHAT_ID="oc_xxxxx"   # 目标群聊 ID，推荐
+# 或者发给个人：
+export FEISHU_USER_ID="ou_xxxxx"
 
 # 其他配置
 export MINIMAX_API_KEY="xxxxx"
+export GEMINI_API_KEY="xxxxx"
 export YOUTUBE_API_KEY="AIzaXxx"
 ```
 
-## 七、代码改动
+## 七、配置点击反馈回调
 
-当前 `main.py` 使用 Webhook 方式，需要修改为开放平台 API：
+点击反馈通过 `worker/` 下的 Cloudflare Worker 接收：
 
-### 改动点
-1. 删除 `FEISHU_WEBHOOK_URL` 和 `FEISHU_WEBHOOK_SECRET`
-2. 添加 `FEISHU_APP_ID`, `FEISHU_APP_SECRET`, `FEISHU_CHAT_ID`
-3. 修改 `send_to_feishu()` 函数：
-   - 先调用 `/auth/v3/tenant_access_token/internal` 获取 token
-   - 再调用 `/im/v1/messages?receive_id_type=chat_id` 发送消息
+```bash
+cd worker
+wrangler secret put GH_TOKEN
+wrangler deploy
+```
 
-### API 文档
-- [获取 tenant_access_token](https://open.feishu.cn/document/server-docs/authentication-management/access-token/tenant_access_token_internal)
-- [发送消息](https://open.feishu.cn/document/server-docs/im-v1/message/create)
+然后在飞书开放平台应用里配置卡片回调地址：
+
+```text
+https://<your-worker>.workers.dev/
+```
+
+Worker 会把点击反馈写入 GitHub `data` 分支的 `feedback.json`。GitHub Actions 每次运行前会执行 `update_preferences.py`，生成 `ranking_hints.txt` 并注入排序 prompt。
 
 ## 对比：Webhook vs 开放平台应用
 
@@ -92,5 +100,5 @@ export YOUTUBE_API_KEY="AIzaXxx"
 
 ## 建议
 
-- **如果只需要推送到固定群**：继续用 Webhook（当前方式），配置最简单
-- **如果需要发给多个群或用户**：用开放平台应用
+- **需要点击反馈**：必须用开放平台应用机器人发送卡片
+- **只需要单向通知**：可以保留 `FEISHU_WEBHOOK_URL` 作为兜底

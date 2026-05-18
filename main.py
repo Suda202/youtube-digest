@@ -19,7 +19,8 @@ from pathlib import Path
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_USER_ID = os.environ.get("FEISHU_USER_ID", "")  # 目标用户 ID (ou_xxxxx)
-FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")  # 群机器人 Webhook
+FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "")  # 目标群 ID (oc_xxxxx)
+FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")  # 群自定义机器人 Webhook（仅兜底，无点击回调）
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 MINIMAX_API_BASE = os.environ.get("MINIMAX_API_BASE", "https://api.minimaxi.com/anthropic")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -348,6 +349,13 @@ def rank_candidates(candidates: list[dict], top_n: int, profile: dict) -> list[d
         lines = "\n".join(f"- {ch}：{note}" for ch, note in channel_notes.items())
         channel_notes_section = f"\n特定频道偏好：\n{lines}\n"
 
+    ranking_hints = ""
+    hints_file = Path("ranking_hints.txt")
+    if hints_file.exists():
+        ranking_hints = hints_file.read_text().strip()
+        if ranking_hints:
+            ranking_hints = f"\n\n动态偏好（基于近期反馈）：\n{ranking_hints}\n"
+
     prompt = f"""你是一个视频筛选助手。请严格按照以下标准筛选。
 
 用户画像：
@@ -380,6 +388,7 @@ def rank_candidates(candidates: list[dict], top_n: int, profile: dict) -> list[d
 {deprioritize_section}
 播放量参考规则：同类深度内容中播放量明显更高的优先，但绝不因为播放量高就选新闻速报。
 {channel_notes_section}
+{ranking_hints}
 
 请按推荐度从高到低输出，每行一个，格式为：
 编号|一句话推荐理由
@@ -466,7 +475,7 @@ def trim_summary(summary: str) -> str:
     return f"{trimmed}\n...（摘要已截断）"
 
 
-def build_card_content(videos_with_summaries: list[dict]) -> dict:
+def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool = False) -> dict:
     """构建飞书卡片消息内容，返回卡片 JSON 结构"""
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     elements = []
@@ -485,12 +494,34 @@ def build_card_content(videos_with_summaries: list[dict]) -> dict:
         if reason:
             elements.append({"tag": "markdown", "content": f"💡 {reason}"})
         elements.append({"tag": "markdown", "content": summary})
-        elements.append({"tag": "action", "actions": [{
+        actions = [{
             "tag": "button",
             "text": {"tag": "plain_text", "content": "▶ 观看视频"},
             "type": "primary",
             "url": v["url"]
-        }]})
+        }]
+        if enable_feedback:
+            feedback_meta = {
+                "video_id": v["video_id"],
+                "title": v["title"],
+                "author": v["author"],
+                "url": v["url"],
+            }
+            actions.extend([
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": "👍 有用"},
+                    "type": "primary",
+                    "value": {**feedback_meta, "action": "like"}
+                },
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": "👎 不想看"},
+                    "type": "secondary",
+                    "value": {**feedback_meta, "action": "dislike"}
+                },
+            ])
+        elements.append({"tag": "action", "actions": actions})
 
     return {
         "config": {"wide_screen_mode": True},
@@ -502,28 +533,40 @@ def build_card_content(videos_with_summaries: list[dict]) -> dict:
     }
 
 
-def send_digest_to_feishu(videos_with_summaries: list[dict]):
-    """发送合并的日报消息到飞书（单条推送）"""
-    if not FEISHU_APP_ID or not FEISHU_APP_SECRET or not FEISHU_USER_ID:
-        print("  ⚠️ 未配置飞书应用凭证 (FEISHU_APP_ID/SECRET/USER_ID)")
+def send_digest_to_feishu(videos_with_summaries: list[dict]) -> bool:
+    """通过飞书应用机器人发送日报；应用卡片支持按钮回调。"""
+    if not FEISHU_APP_ID or not FEISHU_APP_SECRET:
+        print("  ⚠️ 未配置飞书应用凭证 (FEISHU_APP_ID/SECRET)")
         for item in videos_with_summaries:
             print(f"  📝 {item['video']['title']}\n{item['summary']}\n")
-        return
+        return False
+
+    if FEISHU_CHAT_ID:
+        receive_id = FEISHU_CHAT_ID
+        receive_id_type = "chat_id"
+        target_label = "群聊"
+    elif FEISHU_USER_ID:
+        receive_id = FEISHU_USER_ID
+        receive_id_type = "user_id"
+        target_label = "个人"
+    else:
+        print("  ⚠️ 未配置 FEISHU_CHAT_ID 或 FEISHU_USER_ID")
+        return False
 
     token = get_tenant_access_token()
     if not token:
         print("  ❌ 无法获取飞书 access token")
-        return
+        return False
 
-    card = build_card_content(videos_with_summaries)
+    card = build_card_content(videos_with_summaries, enable_feedback=True)
 
     body = {
-        "receive_id": FEISHU_USER_ID,
+        "receive_id": receive_id,
         "msg_type": "interactive",
         "content": json.dumps(card)
     }
 
-    url = "https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=user_id"
+    url = f"https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type={receive_id_type}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -533,32 +576,38 @@ def send_digest_to_feishu(videos_with_summaries: list[dict]):
         resp = requests.post(url, headers=headers, json=body, timeout=10)
         result = resp.json()
         if result.get("code") == 0:
-            print(f"  ✅ 飞书个人推送成功 ({len(videos_with_summaries)} 个视频)")
+            print(f"  ✅ 飞书应用{target_label}推送成功 ({len(videos_with_summaries)} 个视频，已启用反馈按钮)")
+            return True
         else:
-            print(f"  ❌ 飞书个人推送失败: {result}")
+            print(f"  ❌ 飞书应用{target_label}推送失败: {result}")
+            return False
     except Exception as e:
-        print(f"  ❌ 飞书个人推送异常: {e}")
+        print(f"  ❌ 飞书应用{target_label}推送异常: {e}")
+        return False
 
 
-def send_digest_to_webhook(videos_with_summaries: list[dict]):
-    """通过 Webhook 发送日报到飞书群"""
+def send_digest_to_webhook(videos_with_summaries: list[dict]) -> bool:
+    """通过群自定义机器人 Webhook 发送日报；仅兜底，不支持按钮回调。"""
     if not FEISHU_WEBHOOK_URL:
-        return
+        return False
 
     body = {
         "msg_type": "interactive",
-        "card": build_card_content(videos_with_summaries)
+        "card": build_card_content(videos_with_summaries, enable_feedback=False)
     }
 
     try:
         resp = requests.post(FEISHU_WEBHOOK_URL, json=body, timeout=10)
         result = resp.json()
         if result.get("StatusCode") == 0:
-            print(f"  ✅ 飞书群 Webhook 推送成功 ({len(videos_with_summaries)} 个视频)")
+            print(f"  ✅ 飞书群 Webhook 推送成功 ({len(videos_with_summaries)} 个视频，无反馈回调)")
+            return True
         else:
             print(f"  ❌ 飞书群 Webhook 推送失败: {result}")
+            return False
     except Exception as e:
         print(f"  ❌ 飞书群 Webhook 推送异常: {e}")
+        return False
 
 
 # ============ 主流程 ============
@@ -740,8 +789,9 @@ def main():
         history[video["video_id"]] = now_iso
         time.sleep(1)
 
-    # 合并为一条日报推送
-    send_digest_to_webhook(videos_with_summaries)
+    # 合并为一条日报推送。优先用飞书应用机器人，才支持卡片点击反馈；Webhook 仅兜底。
+    if not send_digest_to_feishu(videos_with_summaries):
+        send_digest_to_webhook(videos_with_summaries)
 
     # 未入选的也标记为已处理
     for video in candidates:

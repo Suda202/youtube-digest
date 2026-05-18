@@ -1,0 +1,9 @@
+name = "youtube-digest-feedback"
+main = "src/index.js"
+compatibility_date = "2026-05-18"
+
+[vars]
+REPO_OWNER = "Suda202"
+REPO_NAME = "youtube-digest"
+FEEDBACK_BRANCH = "data"
+FEEDBACK_FILE = "feedback.json"
