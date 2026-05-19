@@ -498,7 +498,14 @@ def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool 
             "tag": "button",
             "text": {"tag": "plain_text", "content": "▶ 观看视频"},
             "type": "primary",
-            "url": v["url"]
+            "url": v["url"],
+            "behaviors": [{
+                "type": "open_url",
+                "default_url": v["url"],
+                "pc_url": v["url"],
+                "ios_url": v["url"],
+                "android_url": v["url"],
+            }],
         }]
         if enable_feedback:
             feedback_meta = {
@@ -512,13 +519,21 @@ def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool 
                     "tag": "button",
                     "text": {"tag": "plain_text", "content": "👍 有用"},
                     "type": "primary",
-                    "value": {**feedback_meta, "action": "like"}
+                    "value": {**feedback_meta, "action": "like"},
+                    "behaviors": [{
+                        "type": "callback",
+                        "value": {**feedback_meta, "action": "like"},
+                    }],
                 },
                 {
                     "tag": "button",
                     "text": {"tag": "plain_text", "content": "👎 不想看"},
                     "type": "secondary",
-                    "value": {**feedback_meta, "action": "dislike"}
+                    "value": {**feedback_meta, "action": "dislike"},
+                    "behaviors": [{
+                        "type": "callback",
+                        "value": {**feedback_meta, "action": "dislike"},
+                    }],
                 },
             ])
         elements.append({"tag": "action", "actions": actions})
