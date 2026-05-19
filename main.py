@@ -507,13 +507,6 @@ def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool 
             "text": {"tag": "plain_text", "content": "▶ 观看视频"},
             "type": "primary",
             "url": v["url"],
-            "behaviors": [{
-                "type": "open_url",
-                "default_url": v["url"],
-                "pc_url": v["url"],
-                "ios_url": v["url"],
-                "android_url": v["url"],
-            }],
         }]
         if enable_feedback:
             feedback_meta = {
@@ -530,26 +523,12 @@ def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool 
                     "text": {"tag": "plain_text", "content": "👍 有用"},
                     "type": "primary",
                     "url": like_url,
-                    "behaviors": [{
-                        "type": "open_url",
-                        "default_url": like_url,
-                        "pc_url": like_url,
-                        "ios_url": like_url,
-                        "android_url": like_url,
-                    }],
                 },
                 {
                     "tag": "button",
                     "text": {"tag": "plain_text", "content": "👎 不想看"},
                     "type": "secondary",
                     "url": dislike_url,
-                    "behaviors": [{
-                        "type": "open_url",
-                        "default_url": dislike_url,
-                        "pc_url": dislike_url,
-                        "ios_url": dislike_url,
-                        "android_url": dislike_url,
-                    }],
                 },
             ])
         elements.append({"tag": "action", "actions": actions})
