@@ -1,5 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "",
+  "buildCommand": "mkdir -p public && touch public/.keep",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/(.*)",
