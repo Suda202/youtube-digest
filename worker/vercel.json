@@ -1,12 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "",
-  "buildCommand": "mkdir -p public && touch public/.keep",
-  "outputDirectory": "public",
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/api"
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
     }
   ]
 }
