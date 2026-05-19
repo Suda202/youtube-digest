@@ -1,1 +1,1 @@
-module.exports = require("../worker/src/vercel");
+module.exports = require("../worker/src/vercel-handler");
