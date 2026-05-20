@@ -2,6 +2,20 @@ const DEFAULT_REPO_OWNER = "Suda202";
 const DEFAULT_REPO_NAME = "youtube-digest";
 const DEFAULT_FEEDBACK_BRANCH = "data";
 const DEFAULT_FEEDBACK_FILE = "feedback.json";
+const SUMMARY_PROMPT_LEAK_FALLBACK = "⚠️ 摘要生成异常，已隐藏提示词内容。请直接打开视频判断。";
+const SUMMARY_PROMPT_LEAK_MARKERS = [
+  "根据以下视频",
+  "视频标题：",
+  "视频字幕：",
+  "视频描述：",
+  "格式要求",
+  "纯文本，不要 markdown",
+  "第一行用",
+  "最后一行用",
+  "全文控制",
+  "max_tokens",
+  "messages",
+];
 
 function sendJson(response, data, status = 200) {
   response.statusCode = status;
@@ -164,6 +178,34 @@ function formatViewCount(count) {
   return String(value);
 }
 
+function looksLikeSummaryPromptLeak(summary) {
+  const text = String(summary || "").trim();
+  if (!text) return false;
+
+  const normalized = text.toLowerCase();
+  const markerCount = SUMMARY_PROMPT_LEAK_MARKERS.filter((marker) => (
+    normalized.includes(marker.toLowerCase())
+  )).length;
+  return markerCount >= 2 || (text.includes("格式要求") && text.includes("视频标题"));
+}
+
+function sanitizeSummary(summary) {
+  const text = String(summary || "").trim();
+  if (!text) return "";
+  if (looksLikeSummaryPromptLeak(text)) return SUMMARY_PROMPT_LEAK_FALLBACK;
+  return text;
+}
+
+function sanitizeCardState(cardState) {
+  return {
+    ...(cardState || {}),
+    items: (cardState?.items || []).map((item) => ({
+      ...item,
+      summary: sanitizeSummary(item.summary),
+    })),
+  };
+}
+
 function buildFeedbackValue(video, action, cardState, feedbackState) {
   return {
     video_id: video.video_id,
@@ -177,8 +219,9 @@ function buildFeedbackValue(video, action, cardState, feedbackState) {
 }
 
 function buildUpdatedCard(cardState, feedbackState) {
+  const safeCardState = sanitizeCardState(cardState);
   const elements = [];
-  for (const [index, item] of (cardState.items || []).entries()) {
+  for (const [index, item] of (safeCardState.items || []).entries()) {
     const video = item.video || {};
     const selected = feedbackState[video.video_id];
     const likeText = selected === "like" ? "✅ 已选有用" : selected === "dislike" ? "👍 改为有用" : "👍 有用";
@@ -196,8 +239,9 @@ function buildUpdatedCard(cardState, feedbackState) {
     if (video.reason) {
       elements.push({ tag: "markdown", content: `💡 ${video.reason}` });
     }
-    if (item.summary) {
-      elements.push({ tag: "markdown", content: item.summary });
+    const summary = sanitizeSummary(item.summary);
+    if (summary) {
+      elements.push({ tag: "markdown", content: summary });
     }
     if (selected) {
       elements.push({
@@ -222,14 +266,14 @@ function buildUpdatedCard(cardState, feedbackState) {
           text: { tag: "plain_text", content: likeText },
           type: selected === "like" ? "primary" : "secondary",
           name: `feedback_like_${video.video_id}`,
-          value: buildFeedbackValue(video, "like", cardState, feedbackState),
+          value: buildFeedbackValue(video, "like", safeCardState, feedbackState),
         },
         {
           tag: "button",
           text: { tag: "plain_text", content: dislikeText },
           type: selected === "dislike" ? "primary" : "secondary",
           name: `feedback_dislike_${video.video_id}`,
-          value: buildFeedbackValue(video, "dislike", cardState, feedbackState),
+          value: buildFeedbackValue(video, "dislike", safeCardState, feedbackState),
         },
       ],
     });
@@ -238,7 +282,7 @@ function buildUpdatedCard(cardState, feedbackState) {
   return {
     config: { wide_screen_mode: true },
     header: {
-      title: { tag: "plain_text", content: `📹 YouTube 今日推荐 (${cardState.date || new Date().toISOString().slice(0, 10)})` },
+      title: { tag: "plain_text", content: `📹 YouTube 今日推荐 (${safeCardState.date || new Date().toISOString().slice(0, 10)})` },
       template: "blue",
     },
     elements,

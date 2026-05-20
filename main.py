@@ -42,6 +42,20 @@ RSS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; youtube-digest/1.0; +https://github.com/Suda202/youtube-digest)",
     "Accept": "application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
 }
+SUMMARY_PROMPT_LEAK_FALLBACK = "⚠️ 摘要生成异常，已隐藏提示词内容。请直接打开视频判断。"
+SUMMARY_PROMPT_LEAK_MARKERS = [
+    "根据以下视频",
+    "视频标题：",
+    "视频字幕：",
+    "视频描述：",
+    "格式要求",
+    "纯文本，不要 markdown",
+    "第一行用",
+    "最后一行用",
+    "全文控制",
+    "max_tokens",
+    "messages",
+]
 
 
 def digest_date_label() -> str:
@@ -401,7 +415,10 @@ def summarize_with_llm(title: str, author: str, content: str, content_type: str 
 
     result = call_llm(prompt, max_tokens=SUMMARY_MAX_TOKENS)
     if result:
-        return {"summary": result}
+        summary = sanitize_summary_text(result)
+        if summary == SUMMARY_PROMPT_LEAK_FALLBACK:
+            print("  ⚠️ LLM 摘要疑似泄露提示词，已隐藏")
+        return {"summary": summary}
     return {"summary": "摘要生成失败"}
 
 
@@ -608,9 +625,29 @@ def format_view_count(count: int) -> str:
     return str(count)
 
 
+def looks_like_summary_prompt_leak(summary: str) -> bool:
+    """Detect cases where the LLM echoes the prompt/input instead of the summary."""
+    text = (summary or "").strip()
+    if not text:
+        return False
+
+    normalized = text.lower()
+    marker_count = sum(1 for marker in SUMMARY_PROMPT_LEAK_MARKERS if marker.lower() in normalized)
+    return marker_count >= 2 or ("格式要求" in text and "视频标题" in text)
+
+
+def sanitize_summary_text(summary: str) -> str:
+    text = (summary or "").strip()
+    if not text:
+        return ""
+    if looks_like_summary_prompt_leak(text):
+        return SUMMARY_PROMPT_LEAK_FALLBACK
+    return text
+
+
 def trim_summary(summary: str) -> str:
     """Keep Feishu cards readable even when the LLM ignores length guidance."""
-    text = (summary or "").strip()
+    text = sanitize_summary_text(summary)
     if len(text) <= SUMMARY_MAX_CHARS:
         return text
     trimmed = text[:SUMMARY_MAX_CHARS].rsplit("\n", 1)[0].strip()
