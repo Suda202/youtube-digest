@@ -113,22 +113,27 @@ def save_history(history: dict):
 
 
 # ============ YouTube RSS ============
-def fetch_rss_videos(channel_id: str) -> list[dict]:
-    """从 YouTube RSS 获取频道最新视频"""
+def fetch_rss_videos(channel_id: str) -> tuple[list[dict], bool]:
+    """从 YouTube RSS 获取频道最新视频，返回 (videos, rss_ok)。"""
     url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
     try:
         resp = requests.get(url, timeout=15)
         resp.raise_for_status()
     except Exception as e:
         print(f"  ⚠️ RSS fetch failed for {channel_id}: {e}")
-        return []
+        return [], False
 
     ns = {
         "atom": "http://www.w3.org/2005/Atom",
         "yt": "http://www.youtube.com/xml/schemas/2015",
         "media": "http://search.yahoo.com/mrss/",
     }
-    root = ET.fromstring(resp.text)
+    try:
+        root = ET.fromstring(resp.text)
+    except ET.ParseError as e:
+        print(f"  ⚠️ RSS parse failed for {channel_id}: {e}")
+        return [], False
+
     videos = []
 
     for entry in root.findall("atom:entry", ns):
@@ -148,7 +153,7 @@ def fetch_rss_videos(channel_id: str) -> list[dict]:
             "url": f"https://www.youtube.com/watch?v={video_id}",
         })
 
-    return videos
+    return videos, True
 
 
 def fetch_channel_upload_playlists(channel_ids: list[str]) -> dict[str, str]:
@@ -189,7 +194,7 @@ def fetch_channel_upload_playlists(channel_ids: list[str]) -> dict[str, str]:
 
 
 def fetch_upload_playlist_videos(channel_id: str, playlist_id: str) -> list[dict]:
-    """从 uploads playlist 获取最近视频，作为 RSS 空结果/失败的稳定兜底。"""
+    """从 uploads playlist 获取最近视频，只作为 RSS 请求失败时的稳定兜底。"""
     if not YOUTUBE_API_KEY:
         return []
 
@@ -798,6 +803,7 @@ def main():
     # 第一阶段：并发拉取所有频道 RSS
     print(f"📡 并发拉取 {len(channels)} 个频道 RSS...")
     all_rss_videos = {}  # channel_id → videos
+    rss_failed_channel_ids = []
     with ThreadPoolExecutor(max_workers=10) as executor:
         future_to_ch = {
             executor.submit(fetch_rss_videos, ch["channel_id"]): ch
@@ -806,18 +812,21 @@ def main():
         for future in as_completed(future_to_ch):
             ch = future_to_ch[future]
             try:
-                videos = future.result()
+                videos, rss_ok = future.result()
+                if not rss_ok:
+                    rss_failed_channel_ids.append(ch["channel_id"])
                 if videos:
                     all_rss_videos[ch["channel_id"]] = videos
             except Exception as e:
                 print(f"  ⚠️ {ch.get('name', ch['channel_id'])}: {e}")
+                rss_failed_channel_ids.append(ch["channel_id"])
 
     total_rss = sum(len(v) for v in all_rss_videos.values())
-    print(f"   RSS 共发现 {total_rss} 个新视频（来自 {len(all_rss_videos)} 个频道）")
+    print(f"   RSS 共发现 {total_rss} 个新视频（来自 {len(all_rss_videos)} 个频道，失败 {len(rss_failed_channel_ids)} 个）")
 
-    fallback_channel_ids = [ch["channel_id"] for ch in channels if ch["channel_id"] not in all_rss_videos]
+    fallback_channel_ids = rss_failed_channel_ids
     if fallback_channel_ids and YOUTUBE_API_KEY:
-        print(f"🔁 RSS 未返回新视频的 {len(fallback_channel_ids)} 个频道，使用 YouTube Data API 兜底...")
+        print(f"🔁 RSS 失败的 {len(fallback_channel_ids)} 个频道，使用 YouTube Data API 兜底...")
         upload_playlists = fetch_channel_upload_playlists(fallback_channel_ids)
         api_fallback_videos = {}
         with ThreadPoolExecutor(max_workers=10) as executor:
@@ -837,7 +846,7 @@ def main():
         total_api_fallback = sum(len(v) for v in api_fallback_videos.values())
         print(f"   API 兜底发现 {total_api_fallback} 个新视频（来自 {len(api_fallback_videos)} 个频道）")
     elif fallback_channel_ids:
-        print("  ⚠️ 未配置 YOUTUBE_API_KEY，无法在 RSS 空结果时兜底")
+        print("  ⚠️ 未配置 YOUTUBE_API_KEY，无法在 RSS 失败时兜底")
 
     total_rss = sum(len(v) for v in all_rss_videos.values())
     print(f"   共发现 {total_rss} 个新视频（来自 {len(all_rss_videos)} 个频道）\n")
@@ -845,7 +854,7 @@ def main():
     # 收集候选长视频（带 quota 保护）
     candidates = []
     api_calls = 0
-    API_QUOTA_LIMIT = 3000  # 保守限制，留余量（每次调用消耗 3 quota）
+    API_QUOTA_LIMIT = 3000  # 保守限制，留余量
 
     for ch in channels:
         channel_id = ch["channel_id"]
