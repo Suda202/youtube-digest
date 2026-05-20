@@ -35,7 +35,13 @@ PROFILE_FILE = os.environ.get("PROFILE_FILE", "profile.json")
 HISTORY_FILE = os.environ.get("HISTORY_FILE", "history.json")
 HISTORY_MAX_DAYS = int(os.environ.get("HISTORY_MAX_DAYS", "30"))
 YOUTUBE_UPLOADS_PAGE_SIZE = int(os.environ.get("YOUTUBE_UPLOADS_PAGE_SIZE", "5"))
+RSS_RETRY_ATTEMPTS = int(os.environ.get("RSS_RETRY_ATTEMPTS", "2"))
+RSS_RETRY_DELAY_SECONDS = float(os.environ.get("RSS_RETRY_DELAY_SECONDS", "1"))
 LOCAL_TIMEZONE = timezone(timedelta(hours=8))
+RSS_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (compatible; youtube-digest/1.0; +https://github.com/Suda202/youtube-digest)",
+    "Accept": "application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.5",
+}
 
 
 def digest_date_label() -> str:
@@ -113,27 +119,29 @@ def save_history(history: dict):
 
 
 # ============ YouTube RSS ============
-def fetch_rss_videos(channel_id: str) -> tuple[list[dict], bool]:
-    """从 YouTube RSS 获取频道最新视频，返回 (videos, rss_ok)。"""
-    url = f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"
-    try:
-        resp = requests.get(url, timeout=15)
-        resp.raise_for_status()
-    except Exception as e:
-        print(f"  ⚠️ RSS fetch failed for {channel_id}: {e}")
-        return [], False
+def uploads_playlist_id_from_channel_id(channel_id: str) -> str:
+    """YouTube uploads playlist id is usually UU + channel id without the UC prefix."""
+    if channel_id.startswith("UC") and len(channel_id) > 2:
+        return f"UU{channel_id[2:]}"
+    return ""
 
+
+def rss_urls_for_channel(channel_id: str) -> list[tuple[str, str]]:
+    urls = [("channel", f"https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}")]
+    uploads_playlist_id = uploads_playlist_id_from_channel_id(channel_id)
+    if uploads_playlist_id:
+        urls.append(("uploads_playlist", f"https://www.youtube.com/feeds/videos.xml?playlist_id={uploads_playlist_id}"))
+    return urls
+
+
+def parse_rss_videos(feed_text: str) -> list[dict]:
     ns = {
         "atom": "http://www.w3.org/2005/Atom",
         "yt": "http://www.youtube.com/xml/schemas/2015",
         "media": "http://search.yahoo.com/mrss/",
     }
-    try:
-        root = ET.fromstring(resp.text)
-    except ET.ParseError as e:
-        print(f"  ⚠️ RSS parse failed for {channel_id}: {e}")
-        return [], False
-
+    root = ET.fromstring(feed_text)
+    author = root.find("atom:title", ns).text
     videos = []
 
     for entry in root.findall("atom:entry", ns):
@@ -143,7 +151,6 @@ def fetch_rss_videos(channel_id: str) -> tuple[list[dict], bool]:
 
         video_id = entry.find("yt:videoId", ns).text
         title = entry.find("atom:title", ns).text
-        author = root.find("atom:title", ns).text
 
         videos.append({
             "video_id": video_id,
@@ -153,7 +160,33 @@ def fetch_rss_videos(channel_id: str) -> tuple[list[dict], bool]:
             "url": f"https://www.youtube.com/watch?v={video_id}",
         })
 
-    return videos, True
+    return videos
+
+
+def fetch_rss_videos(channel_id: str) -> tuple[list[dict], bool]:
+    """从 YouTube RSS 获取频道最新视频，返回 (videos, rss_ok)。"""
+    max_attempts = max(1, RSS_RETRY_ATTEMPTS)
+    last_error = ""
+
+    for source, url in rss_urls_for_channel(channel_id):
+        for attempt in range(1, max_attempts + 1):
+            try:
+                resp = requests.get(url, headers=RSS_HEADERS, timeout=15)
+                resp.raise_for_status()
+                return parse_rss_videos(resp.text), True
+            except ET.ParseError as e:
+                last_error = f"{source} parse error: {e}"
+            except Exception as e:
+                last_error = f"{source} fetch error: {e}"
+
+            if attempt < max_attempts:
+                time.sleep(RSS_RETRY_DELAY_SECONDS)
+
+        if source == "channel":
+            print(f"  ⚠️ RSS channel feed failed for {channel_id}, trying uploads playlist RSS")
+
+    print(f"  ⚠️ RSS fetch failed for {channel_id}: {last_error}")
+    return [], False
 
 
 def fetch_channel_upload_playlists(channel_ids: list[str]) -> dict[str, str]:
