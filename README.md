@@ -20,6 +20,8 @@
     ↓                        ↓                               ↓
 YouTube Data API            输出 Top N + 推荐理由            360 DeepSeek 生成中文摘要
 (时长+描述+播放量)          (失败→摘要 LLM→播放量排序)        ↓
+                                                            合并 AI HOT 精选
+                                                            ↓
                                                             飞书日报合并推送
 ```
 
@@ -62,14 +64,16 @@ YouTube Data API            输出 Top N + 推荐理由            360 DeepSeek 
 4. 应用机器人卡片包含 👍/👎 点击反馈，卡片回调会先返回成功提示，再异步写入 `feedback.json`，下次运行前生成动态排序提示
    - 反馈学习以主题为主：单次点踩只影响主题，不直接惩罚频道
    - 同一频道累计多次净点踩后，才会生成频道级回避提示
-5. 如果当天没有符合条件的视频，默认只写日志；需要状态卡时可开启 `FEISHU_SEND_STATUS_CARD`
-6. 每条视频包含：频道名、时长、播放量、推荐理由、摘要、原视频链接
+5. 默认拉取最近 `LOOKBACK_HOURS` 内的 AI HOT 精选，先按用户偏好做本地二次排序，再和 YouTube 推荐合并到同一张卡片；如果当天没有符合条件的视频但 AI HOT 有内容，也会发送 AI HOT 卡片
+6. 如果当天没有符合条件的视频且 AI HOT 也无内容，默认只写日志；需要状态卡时可开启 `FEISHU_SEND_STATUS_CARD`
+7. 每条视频包含：频道名、时长、播放量、推荐理由、摘要、原视频链接
 
 ## 技术栈
 
 | 组件 | 技术 | 说明 |
 |------|------|------|
 | 视频源 | YouTube RSS + Data API v3 | RSS 并发轮询 + API 补充详情 |
+| AI 资讯 | AI HOT Public API | 拉取最近精选 AI 动态，无需 API Key |
 | 字幕 | yt-dlp | 获取视频字幕用于摘要生成 |
 | 排序 LLM | Gemini 3 Flash | 智能筛选排序（摘要 LLM 兜底） |
 | 摘要 LLM | 360 DeepSeek v4 Flash | 通过 OpenAI 兼容 API 调用 |
@@ -112,6 +116,11 @@ YouTube Data API            输出 Top N + 推荐理由            360 DeepSeek 
 | `MIN_DURATION_MINUTES` | 否 | `3` | 最短视频时长（分钟），过滤 Shorts |
 | `TOP_N` | 否 | `3` | 每日推送视频数量 |
 | `LOOKBACK_HOURS` | 否 | `24` | 回溯时间窗口（小时） |
+| `AIHOT_ENABLED` | 否 | `true` | 是否合并 AI HOT 精选资讯 |
+| `AIHOT_TAKE` | 否 | `5` | 每次最多合并的 AI HOT 条数，最大 20 |
+| `AIHOT_CANDIDATE_TAKE` | 否 | `30` | AI HOT 二次排序前拉取的候选池大小，最大 100 |
+| `AIHOT_MIN_SCORE` | 否 | `0` | AI HOT 最低分数门槛；默认不过滤 |
+| `AIHOT_API_BASE` | 否 | `https://aihot.virxact.com` | AI HOT API Base，一般不用改 |
 | `HISTORY_MAX_DAYS` | 否 | `30` | 历史记录保留天数（自动清理） |
 | `YOUTUBE_UPLOADS_PAGE_SIZE` | 否 | `5` | RSS 兜底时每个频道检查的最新 uploads 数量 |
 | `RSS_RETRY_ATTEMPTS` | 否 | `2` | 每个 RSS URL 的请求尝试次数 |
@@ -141,6 +150,7 @@ export MINIMAX_API_BASE="https://api.360.cn/v1"
 export MINIMAX_MODEL="deepseek/deepseek-v4-flash"
 export GEMINI_API_KEY="AIzaXxx"
 export YOUTUBE_API_KEY="AIzaXxx"
+export AIHOT_ENABLED="true"
 
 python main.py
 ```

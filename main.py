@@ -15,30 +15,64 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+
+def env_bool(name: str, default: bool = False) -> bool:
+    raw_value = os.environ.get(name)
+    if raw_value is None or raw_value.strip() == "":
+        return default
+    return raw_value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_int(name: str, default: int, min_value: int | None = None, max_value: int | None = None) -> int:
+    raw_value = os.environ.get(name)
+    if raw_value is None or raw_value.strip() == "":
+        value = default
+    else:
+        try:
+            value = int(raw_value)
+        except (TypeError, ValueError):
+            value = default
+    if min_value is not None:
+        value = max(min_value, value)
+    if max_value is not None:
+        value = min(max_value, value)
+    return value
+
+
 # ============ 配置 ============
 FEISHU_APP_ID = os.environ.get("FEISHU_APP_ID", "")
 FEISHU_APP_SECRET = os.environ.get("FEISHU_APP_SECRET", "")
 FEISHU_USER_ID = os.environ.get("FEISHU_USER_ID", "")  # 目标用户 ID (ou_xxxxx)
 FEISHU_CHAT_ID = os.environ.get("FEISHU_CHAT_ID", "")  # 目标群 ID (oc_xxxxx)
 FEISHU_WEBHOOK_URL = os.environ.get("FEISHU_WEBHOOK_URL", "")  # 群自定义机器人 Webhook（仅兜底，无点击回调）
-FEISHU_SEND_STATUS_CARD = os.environ.get("FEISHU_SEND_STATUS_CARD", "").lower() in {"1", "true", "yes", "on"}
+FEISHU_SEND_STATUS_CARD = env_bool("FEISHU_SEND_STATUS_CARD")
 # 变量名保留 MINIMAX，避免改动现有 Secrets；实际走 OpenAI 兼容摘要 LLM。
 MINIMAX_API_KEY = os.environ.get("MINIMAX_API_KEY", "")
 MINIMAX_API_BASE = (os.environ.get("MINIMAX_API_BASE") or "https://api.360.cn/v1").rstrip("/")
 MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or "deepseek/deepseek-v4-flash"
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 YOUTUBE_API_KEY = os.environ.get("YOUTUBE_API_KEY", "")
-MIN_DURATION_MINUTES = int(os.environ.get("MIN_DURATION_MINUTES", "3"))  # 过滤 Shorts（<=3min）
-TOP_N = int(os.environ.get("TOP_N", "3"))  # 每日推送 Top N 视频
-SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "700"))
-SUMMARY_MAX_CHARS = int(os.environ.get("SUMMARY_MAX_CHARS", "700"))
-LOOKBACK_HOURS = int(os.environ.get("LOOKBACK_HOURS", "24"))
+MIN_DURATION_MINUTES = env_int("MIN_DURATION_MINUTES", 3, min_value=1)  # 过滤 Shorts（<=3min）
+TOP_N = env_int("TOP_N", 3, min_value=1)  # 每日推送 Top N 视频
+SUMMARY_MAX_TOKENS = env_int("SUMMARY_MAX_TOKENS", 700, min_value=100)
+SUMMARY_MAX_CHARS = env_int("SUMMARY_MAX_CHARS", 700, min_value=100)
+LOOKBACK_HOURS = env_int("LOOKBACK_HOURS", 24, min_value=1)
+AIHOT_ENABLED = env_bool("AIHOT_ENABLED", True)
+AIHOT_API_BASE = (os.environ.get("AIHOT_API_BASE") or "https://aihot.virxact.com").rstrip("/")
+AIHOT_TAKE = env_int("AIHOT_TAKE", 5, min_value=0, max_value=20)
+AIHOT_CANDIDATE_TAKE = env_int("AIHOT_CANDIDATE_TAKE", max(30, AIHOT_TAKE * 6), min_value=1, max_value=100)
+AIHOT_MIN_SCORE = env_int("AIHOT_MIN_SCORE", 0, min_value=0, max_value=100)
+AIHOT_USER_AGENT = os.environ.get("AIHOT_USER_AGENT") or (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36 aihot-skill/0.2.0"
+)
 CHANNELS_FILE = os.environ.get("CHANNELS_FILE", "channels.json")
 PROFILE_FILE = os.environ.get("PROFILE_FILE", "profile.json")
 HISTORY_FILE = os.environ.get("HISTORY_FILE", "history.json")
-HISTORY_MAX_DAYS = int(os.environ.get("HISTORY_MAX_DAYS", "30"))
-YOUTUBE_UPLOADS_PAGE_SIZE = int(os.environ.get("YOUTUBE_UPLOADS_PAGE_SIZE", "5"))
-RSS_RETRY_ATTEMPTS = int(os.environ.get("RSS_RETRY_ATTEMPTS", "2"))
+HISTORY_MAX_DAYS = env_int("HISTORY_MAX_DAYS", 30, min_value=1)
+YOUTUBE_UPLOADS_PAGE_SIZE = env_int("YOUTUBE_UPLOADS_PAGE_SIZE", 5, min_value=1, max_value=50)
+RSS_RETRY_ATTEMPTS = env_int("RSS_RETRY_ATTEMPTS", 2, min_value=1)
 RSS_RETRY_DELAY_SECONDS = float(os.environ.get("RSS_RETRY_DELAY_SECONDS", "1"))
 LOCAL_TIMEZONE = timezone(timedelta(hours=8))
 RSS_HEADERS = {
@@ -134,6 +168,298 @@ def save_history(history: dict):
     path = Path(HISTORY_FILE)
     with open(path, "w") as f:
         json.dump(cleaned, f)
+
+
+# ============ AI HOT ============
+AIHOT_CATEGORY_LABELS = {
+    "ai-models": "模型",
+    "ai-products": "产品",
+    "industry": "行业",
+    "paper": "论文",
+    "tip": "观点",
+}
+
+AIHOT_INTEREST_KEYWORDS = [
+    ("GEO", 30, [
+        "geo",
+        "generative engine optimization",
+        "llmo",
+        "aeo",
+        "生成式引擎优化",
+        "生成式搜索优化",
+        "答案引擎优化",
+    ]),
+    ("AI搜索", 18, [
+        "ai search",
+        "ai 搜索",
+        "chatgpt search",
+        "google ai overviews",
+        "ai overviews",
+        "perplexity",
+        "搜索可见性",
+        "品牌可见性",
+    ]),
+    ("Agentic Engineering", 24, [
+        "agentic engineering",
+        "agentic software engineering",
+        "ai engineering",
+        "engineering agent",
+        "coding agent",
+        "code agent",
+        "software agent",
+        "ai coding",
+        "agentic coding",
+        "devin",
+        "cursor",
+        "claude code",
+        "codex",
+        "harness",
+        "研发智能体",
+        "编程智能体",
+        "软件工程智能体",
+        "工程智能体",
+        "代码智能体",
+    ]),
+    ("Vibe Coding", 20, [
+        "vibe coding",
+        "loop coding",
+        "engineering coding",
+        "氛围编程",
+        " vibe 编程",
+        "循环编程",
+    ]),
+    ("海外增长", 14, [
+        "overseas",
+        "global",
+        "international",
+        "go-to-market",
+        "gtm",
+        "出海",
+        "海外",
+        "海外市场",
+        "海外客户",
+    ]),
+    ("广告营销", 10, [
+        "广告",
+        "创意",
+        "marketing",
+        "ads",
+        "ad creative",
+        "campaign",
+        "品牌",
+        "内容分发",
+        "seo",
+    ]),
+    ("AI产品", 8, [
+        "ai 产品",
+        "产品",
+        "product",
+        "工作流",
+        "workflow",
+        "agent",
+        "智能体",
+        "saas",
+    ]),
+]
+
+AIHOT_DOWNRANK_KEYWORDS = [
+    "股价",
+    "股票",
+    "估值",
+    "融资",
+    "投资",
+    "venture capital",
+    "vc",
+    "ipo",
+    "基金",
+    "从零开始",
+    "教程",
+    "代码实现",
+    "api 参数",
+    "模型架构",
+    "向量数据库",
+    "rag 调参",
+]
+
+
+def utc_iso_z(dt: datetime) -> str:
+    return dt.astimezone(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def fetch_aihot_items(hours: int | None = None, take: int | None = None, profile: dict | None = None) -> list[dict]:
+    """Fetch recent AI HOT selected items. Failure should not block the YouTube digest."""
+    if not AIHOT_ENABLED:
+        return []
+
+    item_limit = AIHOT_TAKE if take is None else take
+    item_limit = max(0, min(100, item_limit))
+    if item_limit == 0:
+        return []
+
+    window_hours = max(1, hours or LOOKBACK_HOURS)
+    since = utc_iso_z(datetime.now(timezone.utc) - timedelta(hours=window_hours))
+    request_limit = item_limit
+    if profile:
+        request_limit = max(item_limit, AIHOT_CANDIDATE_TAKE)
+    try:
+        resp = requests.get(
+            f"{AIHOT_API_BASE}/api/public/items",
+            headers={"User-Agent": AIHOT_USER_AGENT},
+            params={"mode": "selected", "since": since, "take": request_limit},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    except Exception as e:
+        print(f"  ⚠️ AI HOT 拉取失败: {e}")
+        return []
+
+    items = []
+    for raw_item in data.get("items", []):
+        if not isinstance(raw_item, dict):
+            continue
+
+        title = (raw_item.get("title") or "").strip()
+        url = (raw_item.get("url") or "").strip()
+        if not title or not url:
+            continue
+
+        score = raw_item.get("score")
+        if AIHOT_MIN_SCORE and isinstance(score, (int, float)) and score < AIHOT_MIN_SCORE:
+            continue
+
+        items.append({
+            "id": raw_item.get("id", ""),
+            "title": title,
+            "url": url,
+            "source": (raw_item.get("source") or "AI HOT").strip(),
+            "publishedAt": raw_item.get("publishedAt") or "",
+            "summary": (raw_item.get("summary") or "").strip(),
+            "category": raw_item.get("category") or "",
+            "score": score,
+            "selected": raw_item.get("selected", True),
+        })
+        if not profile and len(items) >= item_limit:
+            break
+
+    if profile:
+        items = rank_aihot_items_for_profile(items, profile)
+    return items[:item_limit]
+
+
+def keyword_matches(text: str, keyword: str) -> bool:
+    keyword_lower = keyword.lower().strip()
+    if not keyword_lower:
+        return False
+    if re.fullmatch(r"[a-z0-9][a-z0-9 ._+/-]*", keyword_lower):
+        return re.search(rf"(?<![a-z0-9]){re.escape(keyword_lower)}(?![a-z0-9])", text) is not None
+    return keyword_lower in text
+
+
+def aihot_item_text(item: dict) -> str:
+    return " ".join(
+        str(item.get(key) or "")
+        for key in ("title", "summary", "source", "category")
+    ).lower()
+
+
+def score_aihot_item_for_profile(item: dict, profile: dict | None = None) -> tuple[float, list[str]]:
+    text = aihot_item_text(item)
+    score = float(item.get("score") or 0)
+    match_tags = []
+
+    category = item.get("category")
+    if category == "ai-products":
+        score += 4
+    elif category == "industry":
+        score += 2
+    elif category == "paper":
+        score -= 3
+
+    for tag, weight, keywords in AIHOT_INTEREST_KEYWORDS:
+        if any(keyword_matches(text, keyword) for keyword in keywords):
+            score += weight
+            match_tags.append(tag)
+
+    profile = profile or {}
+    for keyword in profile.get("aihot_boost_keywords", []):
+        if keyword_matches(text, str(keyword)):
+            score += 8
+            match_tags.append(str(keyword))
+
+    downrank_keywords = AIHOT_DOWNRANK_KEYWORDS + [
+        str(keyword) for keyword in profile.get("deprioritize_topics", [])
+    ]
+    for keyword in downrank_keywords:
+        if keyword_matches(text, keyword):
+            score -= 16
+
+    return score, list(dict.fromkeys(match_tags))
+
+
+def rank_aihot_items_for_profile(items: list[dict], profile: dict | None = None) -> list[dict]:
+    ranked = []
+    for item in items:
+        preference_score, match_tags = score_aihot_item_for_profile(item, profile)
+        ranked_item = {**item, "preference_score": preference_score, "match_tags": match_tags}
+        ranked.append(ranked_item)
+
+    return sorted(
+        ranked,
+        key=lambda item: (item.get("preference_score", 0), item.get("publishedAt") or ""),
+        reverse=True,
+    )
+
+
+def format_aihot_time(published_at: str) -> str:
+    if not published_at:
+        return ""
+    try:
+        dt = datetime.fromisoformat(published_at.replace("Z", "+00:00")).astimezone(LOCAL_TIMEZONE)
+    except ValueError:
+        return ""
+
+    now = datetime.now(LOCAL_TIMEZONE)
+    if dt.date() == now.date():
+        return dt.strftime("今天 %H:%M")
+    if dt.date() == (now - timedelta(days=1)).date():
+        return dt.strftime("昨天 %H:%M")
+    return f"{dt.month}/{dt.day} {dt:%H:%M}"
+
+
+def build_aihot_card_elements(aihot_items: list[dict]) -> list[dict]:
+    if not aihot_items:
+        return []
+
+    elements = [{"tag": "markdown", "content": "**🔥 AI HOT 精选**"}]
+    for i, item in enumerate(aihot_items, 1):
+        category = AIHOT_CATEGORY_LABELS.get(item.get("category", ""), "")
+        published = format_aihot_time(item.get("publishedAt", ""))
+        score = item.get("score")
+
+        meta_parts = [part for part in [item.get("source", "AI HOT"), category, published] if part]
+        if isinstance(score, (int, float)):
+            meta_parts.append(f"{int(score)} 分")
+        match_tags = item.get("match_tags") or []
+        if match_tags:
+            meta_parts.append("相关：" + "、".join(match_tags[:3]))
+        meta = " · ".join(meta_parts)
+
+        summary = item.get("summary", "")
+        content = f"**{i}. {item['title']}**"
+        if meta:
+            content += f"\n{meta}"
+        if summary:
+            content += f"\n{summary}"
+
+        elements.append({"tag": "markdown", "content": content})
+        elements.append({"tag": "action", "actions": [{
+            "tag": "button",
+            "text": {"tag": "plain_text", "content": "查看原文"},
+            "type": "default",
+            "url": item["url"],
+        }]})
+    return elements
 
 
 # ============ YouTube RSS ============
@@ -752,11 +1078,16 @@ def build_feedback_card_state(videos_with_summaries: list[dict], card_date: str)
     return {"date": card_date, "items": items}
 
 
-def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool = False) -> dict:
+def build_card_content(
+    videos_with_summaries: list[dict],
+    aihot_items: list[dict] | None = None,
+    enable_feedback: bool = False,
+) -> dict:
     """构建飞书卡片消息内容，返回卡片 JSON 结构"""
     today = digest_date_label()
+    aihot_items = aihot_items or []
     elements = []
-    card_state = build_feedback_card_state(videos_with_summaries, today) if enable_feedback else None
+    card_state = build_feedback_card_state(videos_with_summaries, today) if enable_feedback and videos_with_summaries else None
     feedback_state = {}
 
     for i, item in enumerate(videos_with_summaries, 1):
@@ -814,10 +1145,22 @@ def build_card_content(videos_with_summaries: list[dict], enable_feedback: bool 
             ])
         elements.append({"tag": "action", "actions": actions})
 
+    if aihot_items:
+        if elements:
+            elements.append({"tag": "hr"})
+        elements.extend(build_aihot_card_elements(aihot_items))
+
+    if videos_with_summaries and aihot_items:
+        title = f"📹 YouTube + AI HOT 今日推荐 ({today})"
+    elif aihot_items:
+        title = f"🔥 AI HOT 今日精选 ({today})"
+    else:
+        title = f"📹 YouTube 今日推荐 ({today})"
+
     return {
         "config": {"wide_screen_mode": True},
         "header": {
-            "title": {"tag": "plain_text", "content": f"📹 YouTube 今日推荐 ({today})"},
+            "title": {"tag": "plain_text", "content": title},
             "template": "blue"
         },
         "elements": elements
@@ -908,7 +1251,7 @@ def send_card_to_webhook(card: dict, success_message: str) -> bool:
         return False
 
 
-def send_digest_to_feishu(videos_with_summaries: list[dict]) -> bool:
+def send_digest_to_feishu(videos_with_summaries: list[dict], aihot_items: list[dict] | None = None) -> bool:
     """通过飞书应用机器人发送日报；应用卡片支持按钮回调。"""
     if not FEISHU_APP_ID or not FEISHU_APP_SECRET:
         print("  ⚠️ 未配置飞书应用凭证 (FEISHU_APP_ID/SECRET)")
@@ -916,14 +1259,40 @@ def send_digest_to_feishu(videos_with_summaries: list[dict]) -> bool:
             print(f"  📝 {item['video']['title']}\n{item['summary']}\n")
         return False
 
-    card = build_card_content(videos_with_summaries, enable_feedback=True)
-    return send_card_to_feishu(card, f"推送成功 ({len(videos_with_summaries)} 个视频，已启用反馈按钮)")
+    card = build_card_content(videos_with_summaries, aihot_items=aihot_items, enable_feedback=True)
+    aihot_count = len(aihot_items or [])
+    extra = f"，AI HOT {aihot_count} 条" if aihot_count else ""
+    return send_card_to_feishu(card, f"推送成功 ({len(videos_with_summaries)} 个视频{extra}，已启用反馈按钮)")
 
 
-def send_digest_to_webhook(videos_with_summaries: list[dict]) -> bool:
+def send_digest_to_webhook(videos_with_summaries: list[dict], aihot_items: list[dict] | None = None) -> bool:
     """通过群自定义机器人 Webhook 发送日报；仅兜底，不支持按钮回调。"""
-    card = build_card_content(videos_with_summaries, enable_feedback=False)
-    return send_card_to_webhook(card, f"推送成功 ({len(videos_with_summaries)} 个视频，无反馈回调)")
+    card = build_card_content(videos_with_summaries, aihot_items=aihot_items, enable_feedback=False)
+    aihot_count = len(aihot_items or [])
+    extra = f"，AI HOT {aihot_count} 条" if aihot_count else ""
+    return send_card_to_webhook(card, f"推送成功 ({len(videos_with_summaries)} 个视频{extra}，无反馈回调)")
+
+
+def send_combined_digest(videos_with_summaries: list[dict], aihot_items: list[dict] | None = None) -> bool:
+    """Send one daily card containing YouTube recommendations and optional AI HOT items."""
+    aihot_items = aihot_items or []
+    if not videos_with_summaries and not aihot_items:
+        return False
+
+    card = build_card_content(
+        videos_with_summaries,
+        aihot_items=aihot_items,
+        enable_feedback=bool(videos_with_summaries),
+    )
+    parts = []
+    if videos_with_summaries:
+        parts.append(f"{len(videos_with_summaries)} 个视频")
+    if aihot_items:
+        parts.append(f"AI HOT {len(aihot_items)} 条")
+    success_message = f"推送成功 ({'，'.join(parts)})"
+    if send_card_to_feishu(card, success_message):
+        return True
+    return send_card_to_webhook(card, success_message)
 
 
 def send_status_to_feishu(title: str, message: str, template: str = "grey") -> bool:
@@ -951,6 +1320,9 @@ def main():
     print(f"   过滤: 非 Shorts (>{MIN_DURATION_MINUTES}min), 最近 {LOOKBACK_HOURS}h, Top {top_n}\n")
     history = load_history()
     now_iso = datetime.now(timezone.utc).isoformat()
+    aihot_items = fetch_aihot_items(LOOKBACK_HOURS, profile=profile)
+    if aihot_items:
+        print(f"🔥 AI HOT 精选 {len(aihot_items)} 条，将合并到今日推送")
 
     # 第一阶段：并发拉取所有频道 RSS
     print(f"📡 并发拉取 {len(channels)} 个频道 RSS...")
@@ -1039,10 +1411,11 @@ def main():
 
     if not candidates:
         print("\n📭 没有新的长视频候选")
-        send_status_to_feishu(
-            "今天没有符合条件的新长视频",
-            f"已扫描 {len(channels)} 个频道，最近 {LOOKBACK_HOURS} 小时没有发现满足时长和去重条件的视频。",
-        )
+        if not send_combined_digest([], aihot_items):
+            send_status_to_feishu(
+                "今天没有符合条件的新长视频",
+                f"已扫描 {len(channels)} 个频道，最近 {LOOKBACK_HOURS} 小时没有发现满足时长和去重条件的视频。",
+            )
         save_history(history)
         return
 
@@ -1114,10 +1487,11 @@ def main():
 
     if not filtered:
         print("\n📭 预过滤后没有候选视频")
-        send_status_to_feishu(
-            "今天没有符合偏好的推荐",
-            f"已发现 {len(candidates)} 个新长视频，但都被偏好规则过滤掉了。主要会过滤投资、纯技术细节、入门教程和低信息密度内容。",
-        )
+        if not send_combined_digest([], aihot_items):
+            send_status_to_feishu(
+                "今天没有符合偏好的推荐",
+                f"已发现 {len(candidates)} 个新长视频，但都被偏好规则过滤掉了。主要会过滤投资、纯技术细节、入门教程和低信息密度内容。",
+            )
         save_history(history)
         return
 
@@ -1156,15 +1530,15 @@ def main():
         time.sleep(1)
 
     # 合并为一条日报推送。优先用飞书应用机器人，才支持卡片点击反馈；Webhook 仅兜底。
-    if not send_digest_to_feishu(videos_with_summaries):
-        send_digest_to_webhook(videos_with_summaries)
+    send_combined_digest(videos_with_summaries, aihot_items)
 
     # 未入选的也标记为已处理
     for video in candidates:
         history[video["video_id"]] = now_iso
 
     save_history(history)
-    print(f"\n✅ 完成，共推送 {len(top_videos)} 个视频（候选 {len(candidates)} 个，API 调用 {api_calls} 次）")
+    aihot_note = f"，AI HOT {len(aihot_items)} 条" if aihot_items else ""
+    print(f"\n✅ 完成，共推送 {len(top_videos)} 个视频{aihot_note}（候选 {len(candidates)} 个，API 调用 {api_calls} 次）")
 
 
 if __name__ == "__main__":

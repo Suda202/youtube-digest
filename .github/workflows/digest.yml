@@ -62,6 +62,11 @@ jobs:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           YT_COOKIES_FILE: cookies.txt
+          AIHOT_ENABLED: ${{ vars.AIHOT_ENABLED }}
+          AIHOT_TAKE: ${{ vars.AIHOT_TAKE }}
+          AIHOT_CANDIDATE_TAKE: ${{ vars.AIHOT_CANDIDATE_TAKE }}
+          AIHOT_MIN_SCORE: ${{ vars.AIHOT_MIN_SCORE }}
+          AIHOT_API_BASE: ${{ vars.AIHOT_API_BASE }}
         run: python main.py
 
       - name: Save data to data branch
