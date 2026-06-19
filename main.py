@@ -171,14 +171,6 @@ def save_history(history: dict):
 
 
 # ============ AI HOT ============
-AIHOT_CATEGORY_LABELS = {
-    "ai-models": "模型",
-    "ai-products": "产品",
-    "industry": "行业",
-    "paper": "论文",
-    "tip": "观点",
-}
-
 AIHOT_INTEREST_KEYWORDS = [
     ("GEO", 30, [
         "geo",
@@ -411,48 +403,18 @@ def rank_aihot_items_for_profile(items: list[dict], profile: dict | None = None)
     )
 
 
-def format_aihot_time(published_at: str) -> str:
-    if not published_at:
-        return ""
-    try:
-        dt = datetime.fromisoformat(published_at.replace("Z", "+00:00")).astimezone(LOCAL_TIMEZONE)
-    except ValueError:
-        return ""
-
-    now = datetime.now(LOCAL_TIMEZONE)
-    if dt.date() == now.date():
-        return dt.strftime("今天 %H:%M")
-    if dt.date() == (now - timedelta(days=1)).date():
-        return dt.strftime("昨天 %H:%M")
-    return f"{dt.month}/{dt.day} {dt:%H:%M}"
-
-
 def build_aihot_card_elements(aihot_items: list[dict]) -> list[dict]:
     if not aihot_items:
         return []
 
-    elements = [{"tag": "markdown", "content": "**🔥 AI HOT 精选**"}]
+    elements = []
     for i, item in enumerate(aihot_items, 1):
-        category = AIHOT_CATEGORY_LABELS.get(item.get("category", ""), "")
-        published = format_aihot_time(item.get("publishedAt", ""))
-        score = item.get("score")
-
-        meta_parts = [part for part in [item.get("source", "AI HOT"), category, published] if part]
-        if isinstance(score, (int, float)):
-            meta_parts.append(f"{int(score)} 分")
-        match_tags = item.get("match_tags") or []
-        if match_tags:
-            meta_parts.append("相关：" + "、".join(match_tags[:3]))
-        meta = " · ".join(meta_parts)
-
-        summary = item.get("summary", "")
-        content = f"**{i}. {item['title']}**"
-        if meta:
-            content += f"\n{meta}"
+        if i > 1:
+            elements.append({"tag": "hr"})
+        elements.append({"tag": "markdown", "content": f"**{i}. {item['title']}**"})
+        summary = (item.get("summary") or "").strip()
         if summary:
-            content += f"\n{summary}"
-
-        elements.append({"tag": "markdown", "content": content})
+            elements.append({"tag": "markdown", "content": summary})
         elements.append({"tag": "action", "actions": [{
             "tag": "button",
             "text": {"tag": "plain_text", "content": "查看原文"},

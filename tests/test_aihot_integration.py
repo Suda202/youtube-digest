@@ -140,7 +140,7 @@ class AihotIntegrationTests(unittest.TestCase):
         self.assertIn("Agentic Engineering", items[0]["match_tags"])
         self.assertIn("Vibe Coding", items[0]["match_tags"])
 
-    def test_build_card_content_can_render_aihot_only_card(self):
+    def test_build_card_content_renders_aihot_as_title_and_summary_only(self):
         signature = inspect.signature(main.build_card_content)
         if "aihot_items" not in signature.parameters:
             self.fail("build_card_content should accept aihot_items")
@@ -151,7 +151,7 @@ class AihotIntegrationTests(unittest.TestCase):
                 {
                     "title": "Anthropic 发布产品更新",
                     "url": "https://example.com/anthropic",
-                    "source": "Anthropic News",
+                    "source": "不应显示的来源",
                     "publishedAt": "2026-06-18T02:30:00.000Z",
                     "summary": "重点影响企业 AI 工作流。",
                     "category": "ai-products",
@@ -162,14 +162,20 @@ class AihotIntegrationTests(unittest.TestCase):
         )
 
         self.assertIn("AI HOT", card["header"]["title"]["content"])
-        markdown = "\n".join(
+        markdown_blocks = [
             element.get("content", "")
             for element in card["elements"]
             if element.get("tag") == "markdown"
-        )
-        self.assertIn("Anthropic 发布产品更新", markdown)
-        self.assertIn("Anthropic News", markdown)
-        self.assertIn("重点影响企业 AI 工作流", markdown)
+        ]
+        self.assertEqual(markdown_blocks, [
+            "**1. Anthropic 发布产品更新**",
+            "重点影响企业 AI 工作流。",
+        ])
+        rendered_text = "\n".join(markdown_blocks)
+        self.assertNotIn("不应显示的来源", rendered_text)
+        self.assertNotIn("89 分", rendered_text)
+        self.assertNotIn("ai-products", rendered_text)
+        self.assertNotIn("今天", rendered_text)
         action_text = [
             action["text"]["content"]
             for element in card["elements"]
@@ -178,6 +184,21 @@ class AihotIntegrationTests(unittest.TestCase):
         ]
         self.assertIn("查看原文", action_text)
         self.assertNotIn("👍 有用", action_text)
+
+    def test_aihot_items_are_separated_without_repeating_section_heading(self):
+        elements = main.build_aihot_card_elements([
+            {"title": "第一条", "summary": "第一条摘要", "url": "https://example.com/1"},
+            {"title": "第二条", "summary": "第二条摘要", "url": "https://example.com/2"},
+        ])
+
+        self.assertEqual(
+            [element["tag"] for element in elements],
+            ["markdown", "markdown", "action", "hr", "markdown", "markdown", "action"],
+        )
+        markdown_text = "\n".join(
+            element["content"] for element in elements if element["tag"] == "markdown"
+        )
+        self.assertNotIn("AI HOT 精选", markdown_text)
 
     def test_send_combined_digest_uses_aihot_items_when_video_list_is_empty(self):
         send_combined_digest = getattr(main, "send_combined_digest", None)
