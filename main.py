@@ -403,6 +403,12 @@ def rank_aihot_items_for_profile(items: list[dict], profile: dict | None = None)
     )
 
 
+def format_aihot_summary(summary: str) -> str:
+    """Add paragraph breaks to AI HOT's single-paragraph Chinese summaries."""
+    text = (summary or "").strip()
+    return re.sub(r"([。！？][”’」』）》】]?)\s*(?=\S)", r"\1\n\n", text)
+
+
 def build_aihot_card_elements(aihot_items: list[dict]) -> list[dict]:
     if not aihot_items:
         return []
@@ -412,7 +418,7 @@ def build_aihot_card_elements(aihot_items: list[dict]) -> list[dict]:
         if i > 1:
             elements.append({"tag": "hr"})
         elements.append({"tag": "markdown", "content": f"**{i}. {item['title']}**"})
-        summary = (item.get("summary") or "").strip()
+        summary = format_aihot_summary(item.get("summary") or "")
         if summary:
             elements.append({"tag": "markdown", "content": summary})
         elements.append({"tag": "action", "actions": [{

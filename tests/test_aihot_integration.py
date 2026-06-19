@@ -200,6 +200,23 @@ class AihotIntegrationTests(unittest.TestCase):
         )
         self.assertNotIn("AI HOT 精选", markdown_text)
 
+    def test_aihot_summary_is_split_into_readable_paragraphs(self):
+        elements = main.build_aihot_card_elements([{
+            "title": "产品更新",
+            "summary": "先说核心变化。再解释对用户的影响！最后给出适用场景？",
+            "url": "https://example.com/update",
+        }])
+
+        summary_blocks = [
+            element["content"]
+            for element in elements
+            if element["tag"] == "markdown" and not element["content"].startswith("**")
+        ]
+        self.assertEqual(
+            summary_blocks,
+            ["先说核心变化。\n\n再解释对用户的影响！\n\n最后给出适用场景？"],
+        )
+
     def test_send_combined_digest_uses_aihot_items_when_video_list_is_empty(self):
         send_combined_digest = getattr(main, "send_combined_digest", None)
         if send_combined_digest is None:
