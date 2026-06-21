@@ -41,7 +41,7 @@ function escapeHtml(value) {
 
 function feedbackSuccessHtml(feedbackData) {
   const label = feedbackData.reaction === "like" ? "有用" : "不想看";
-  const title = escapeHtml(feedbackData.videoMeta.title || feedbackData.videoId);
+  const title = escapeHtml(feedbackData.contentMeta.title || feedbackData.contentId);
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -59,7 +59,7 @@ function feedbackSuccessHtml(feedbackData) {
 <body>
   <main>
     <h1>反馈已记录</h1>
-    <p>这条视频已标记为 <span class="label">${label}</span>。</p>
+    <p>这条内容已标记为 <span class="label">${label}</span>。</p>
     <p>${title}</p>
     <p>可以关闭这个页面回到飞书。</p>
   </main>
@@ -146,29 +146,70 @@ function normalizeActionValue(rawValue) {
   return {};
 }
 
+function normalizeSelectionTags(value) {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean).slice(0, 5);
+  if (typeof value !== "string" || !value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean).slice(0, 5);
+  } catch {
+    return value.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 5);
+  }
+  return [];
+}
+
+function feedbackEventId() {
+  if (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function feedbackDataFromValue(value) {
+  const contentId = value.content_id || value.contentId || value.video_id || value.videoId;
+  const reaction = value.action;
+  if (!contentId || !["like", "dislike"].includes(reaction)) return null;
+
+  const contentType = value.content_type || value.contentType || (
+    String(contentId).startsWith("aihot:") ? "aihot" : "youtube"
+  );
+  const creator = value.creator || value.author || "";
+  const defaultUrl = contentType === "youtube"
+    ? `https://www.youtube.com/watch?v=${contentId}`
+    : "";
+  const contentMeta = {
+    content_id: contentId,
+    content_type: contentType,
+    title: value.title || "",
+    creator,
+    url: value.url || defaultUrl,
+    category: value.category || "",
+    selection_tags: normalizeSelectionTags(value.selection_tags || value.selectionTags),
+  };
+
+  return {
+    contentId,
+    contentType,
+    reaction,
+    reason: value.reason || null,
+    cardState: value.card_state || value.cardState || null,
+    feedbackState: value.feedback_state || value.feedbackState || {},
+    contentMeta,
+    videoId: contentId,
+    videoMeta: {
+      title: contentMeta.title,
+      author: creator,
+      url: contentMeta.url,
+    },
+  };
+}
+
 function extractFeedback(payload) {
   const event = payload.event || payload;
   const action = event.action || payload.action || {};
   const value = normalizeActionValue(action.value);
 
-  const videoId = value.video_id || value.videoId;
-  const reaction = value.action;
-  if (!videoId || !["like", "dislike"].includes(reaction)) {
-    return null;
-  }
-
-  return {
-    videoId,
-    reaction,
-    reason: value.reason || null,
-    cardState: value.card_state || value.cardState || null,
-    feedbackState: value.feedback_state || value.feedbackState || {},
-    videoMeta: {
-      title: value.title || "",
-      author: value.author || "",
-      url: value.url || `https://www.youtube.com/watch?v=${videoId}`,
-    },
-  };
+  return feedbackDataFromValue(value);
 }
 
 function formatViewCount(count) {
@@ -291,39 +332,27 @@ function buildUpdatedCard(cardState, feedbackState) {
 
 function extractFeedbackFromQuery(query) {
   const value = query || {};
-  const videoId = value.video_id || value.videoId;
-  const reaction = value.action;
-  if (!videoId || !["like", "dislike"].includes(reaction)) {
-    return null;
-  }
-
-  return {
-    videoId,
-    reaction,
-    reason: value.reason || null,
-    videoMeta: {
-      title: value.title || "",
-      author: value.author || "",
-      url: value.url || `https://www.youtube.com/watch?v=${videoId}`,
-    },
-  };
+  return feedbackDataFromValue(value);
 }
 
 async function recordFeedbackOnce(env, feedbackData) {
   const { sha, data } = await readGithubFile(env);
-  const current = data[feedbackData.videoId] || {
+  const current = data[feedbackData.contentId] || {
+    content_meta: feedbackData.contentMeta,
     video_meta: feedbackData.videoMeta,
     reactions: [],
   };
 
+  current.content_meta = { ...current.content_meta, ...feedbackData.contentMeta };
   current.video_meta = { ...current.video_meta, ...feedbackData.videoMeta };
   current.reactions = current.reactions || [];
   current.reactions.push({
+    event_id: feedbackEventId(),
     reaction: feedbackData.reaction,
     reason: feedbackData.reason,
     timestamp: new Date().toISOString(),
   });
-  data[feedbackData.videoId] = current;
+  data[feedbackData.contentId] = current;
 
   await writeGithubFile(env, sha, data);
 }
