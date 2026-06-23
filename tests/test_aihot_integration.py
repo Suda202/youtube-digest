@@ -164,6 +164,55 @@ class AihotIntegrationTests(unittest.TestCase):
         self.assertIn("Agentic Engineering", items[0]["match_tags"])
         self.assertIn("Vibe Coding", items[0]["match_tags"])
 
+    def test_aihot_quality_gate_rejects_generic_vertical_ai_news(self):
+        items = [
+            {
+                "id": "gaokao_agent",
+                "title": "国内首个高考志愿AI测评出炉，千问多项表现超过资深咨询师",
+                "summary": "测试高考志愿填报Agent模块，覆盖院校和专业数据。",
+                "source": "公众号：千问APP",
+                "category": "ai-products",
+                "score": 88,
+                "url": "https://example.com/gaokao",
+            },
+            {
+                "id": "cyber_threat",
+                "title": "五眼联盟警告：AI网络威胁数月内将影响普通用户",
+                "summary": "自动化智能体可扫描漏洞，钓鱼诈骗和勒索软件增长。",
+                "source": "AI News",
+                "category": "industry",
+                "score": 86,
+                "url": "https://example.com/cyber",
+            },
+            {
+                "id": "model_release",
+                "title": "京东全栈开源JoyAI-VL-Interaction，从一问一答走向边看边说",
+                "summary": "发布开源模型，多个基准和盲评胜率表现突出。",
+                "source": "公众号：京东JoyAI",
+                "category": "ai-models",
+                "score": 90,
+                "url": "https://example.com/model",
+            },
+            {
+                "id": "coding_agent_eval",
+                "title": "Google Labs 提出用洞察策略评估 AI 编码智能体的主动性",
+                "summary": "评估 AI coding agent 是否能主动发现开发者真实目标。",
+                "source": "Google Developers Blog",
+                "category": "paper",
+                "score": 61,
+                "url": "https://example.com/coding-agent-eval",
+            },
+        ]
+
+        selected = main.select_aihot_items_for_profile(
+            items,
+            {"favorite_content": "Agentic Engineering、Coding Agent、产品策略"},
+            take=5,
+        )
+
+        self.assertEqual([item["id"] for item in selected], ["coding_agent_eval"])
+        self.assertEqual(selected[0]["selection_lane"], "agent")
+
     def test_build_card_content_renders_aihot_as_title_and_summary_only(self):
         signature = inspect.signature(main.build_card_content)
         if "aihot_items" not in signature.parameters:

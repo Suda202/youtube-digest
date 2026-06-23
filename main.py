@@ -177,10 +177,18 @@ AIHOT_INTEREST_KEYWORDS = [
         "循环工程",
     ]),
     ("Agent", 24, [
-        "agent",
         "agentic",
         "deep agents",
         "coding agent",
+        "code agent",
+        "software agent",
+        "ai agent workflow",
+        "multi-agent orchestration",
+        "多智能体编排",
+        "编程智能体",
+        "编码智能体",
+        "代码智能体",
+        "软件工程智能体",
         "智能体",
     ]),
     ("GEO", 30, [
@@ -259,8 +267,6 @@ AIHOT_INTEREST_KEYWORDS = [
         "product",
         "工作流",
         "workflow",
-        "agent",
-        "智能体",
         "saas",
     ]),
 ]
@@ -298,8 +304,10 @@ AIHOT_HARD_REJECT_KEYWORDS = [
 ]
 
 AIHOT_AGENT_KEYWORDS = [
-    "agent", "agentic", "deep agents", "coding agent", "code agent",
-    "harness", "loop engineering", "claude code", "codex", "智能体",
+    "agentic", "deep agents", "coding agent", "code agent",
+    "software agent", "ai agent workflow", "multi-agent orchestration",
+    "harness", "loop engineering", "claude code", "codex", "cursor", "devin",
+    "研发智能体", "编程智能体", "编码智能体", "代码智能体", "软件工程智能体", "多智能体编排",
 ]
 
 AIHOT_BUSINESS_KEYWORDS = [
@@ -312,6 +320,18 @@ AIHOT_FRONTIER_KEYWORDS = [
     "silicon valley", "硅谷", "frontier", "前沿", "趋势",
     "openai", "anthropic", "deepmind", "a16z", "sequoia",
     "new model", "新模型", "research breakthrough", "研究突破",
+]
+
+AIHOT_LOW_VALUE_VERTICAL_KEYWORDS = [
+    "高考", "志愿填报", "高考志愿", "红包", "朋友圈",
+    "语音克隆", "tts", "音频生成", "ocr",
+    "自动驾驶", "纽北", "车牌", "前女友",
+    "网络威胁", "勒索软件", "钓鱼诈骗", "安全威胁",
+]
+
+AIHOT_GENERIC_MODEL_RELEASE_KEYWORDS = [
+    "开源模型", "模型发布", "正式发布", "新模型", "基座模型",
+    "参数", "榜单", "sota", "盲评", "胜率",
 ]
 
 
@@ -411,6 +431,11 @@ def is_agent_focused_aihot_item(item: dict) -> bool:
     return any(keyword_matches(text, keyword) for keyword in AIHOT_AGENT_KEYWORDS)
 
 
+def is_business_focused_aihot_item(item: dict) -> bool:
+    text = aihot_item_text(item)
+    return any(keyword_matches(text, keyword) for keyword in AIHOT_BUSINESS_KEYWORDS)
+
+
 def score_aihot_item_for_profile(
     item: dict,
     profile: dict | None = None,
@@ -501,6 +526,13 @@ def passes_aihot_quality_gate(item: dict, profile: dict | None = None) -> bool:
         return False
 
     agent_focused = is_agent_focused_aihot_item(item)
+    business_focused = is_business_focused_aihot_item(item)
+    if any(keyword_matches(text, keyword) for keyword in AIHOT_LOW_VALUE_VERTICAL_KEYWORDS):
+        return False
+    if not agent_focused and not business_focused:
+        if any(keyword_matches(text, keyword) for keyword in AIHOT_GENERIC_MODEL_RELEASE_KEYWORDS):
+            return False
+
     generic_tutorial = any(keyword_matches(text, keyword) for keyword in (
         "从零开始", "getting started", "beginner tutorial", "安装教程",
         "api 参数", "向量数据库教程", "rag 调参",
