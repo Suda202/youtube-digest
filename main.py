@@ -58,7 +58,7 @@ SUMMARY_MAX_CHARS = env_int("SUMMARY_MAX_CHARS", 700, min_value=100)
 LOOKBACK_HOURS = env_int("LOOKBACK_HOURS", 24, min_value=1)
 AIHOT_ENABLED = env_bool("AIHOT_ENABLED", True)
 AIHOT_API_BASE = (os.environ.get("AIHOT_API_BASE") or "https://aihot.virxact.com").rstrip("/")
-AIHOT_TAKE = env_int("AIHOT_TAKE", 7, min_value=0, max_value=20)
+AIHOT_TAKE = env_int("AIHOT_TAKE", 3, min_value=0, max_value=20)
 AIHOT_CANDIDATE_TAKE = env_int("AIHOT_CANDIDATE_TAKE", max(30, AIHOT_TAKE * 6), min_value=1, max_value=100)
 AIHOT_MIN_SCORE = env_int("AIHOT_MIN_SCORE", 0, min_value=0, max_value=100)
 AIHOT_USER_AGENT = os.environ.get("AIHOT_USER_AGENT") or (
