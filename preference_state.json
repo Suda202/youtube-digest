@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "processed_events": {
+    "d7e7ed93fcbd9fa7694c85e7a33709808a4496d042870568f9501ceb8cfe5e19": "2026-05-19T16:16:43.976Z",
+    "ca815b09a0f88933cf7af52bfb153ef72829e9d292e45adfdbd29a418765ab2c": "2026-05-19T17:26:06.257Z",
+    "09d158013be68e3f3b91e061fd3f5c611438876467b4349f8014ea3a4fd3df9a": "2026-05-19T17:26:08.825Z",
+    "ee830b6cb95f46bb8a2d1864f22bce6b73101029a2882055ba66dcff9c562b4a": "2026-05-20T16:15:54.720Z",
+    "35c415fc0eaa597dbdb97a644279675ec4e68e8215a442db74345df168904f79": "2026-05-23T03:56:53.640Z",
+    "0641b67bc5af772a2cd29556913399f0e9c54a96e1865995e3db93067639261a": "2026-05-23T03:57:22.545Z",
+    "97a46476face908968d8934ac65295d970fc1d5963e8b8f80f25c6df23fd7c72": "2026-06-18T14:52:57.139Z",
+    "65949cf143086a4a258ff0026cc42d806b144eeebb0a500e6611db570ea01b1b": "2026-06-18T14:53:14.349Z",
+    "04a4dc7bc2366c65afab25dea086d9795064adb582213c8332198b8a98a156b1": "2026-06-18T14:53:18.499Z",
+    "2b9f79ed3f8fb82facde8d2ddfc1cb8c7995d8d3c283e23dca75db5cdfa9c627": "2026-06-18T14:53:21.440Z",
+    "17129dccd721df9486a7ba62e720d8e81f8dc76a6488dc3cbff46bcf0e818e73": "2026-06-23T13:16:37.527Z",
+    "3d63b7cf61d5434bc30e732f1558c70d576d65ce0e0f66495d0ee2c229541193": "2026-06-23T13:16:43.930Z",
+    "aedb4a457c1ab20e039e9b04b9727f717e6acb319663ca24a277ca08976851f4": "2026-07-01T01:18:25.049Z",
+    "5ce2d587408c6b30da9d237a4945f0c216eb2b97af4b0862895aba5f2350f066": "2026-07-01T01:18:35.814Z",
+    "8df03e957939d2487153afd1ad6809d88c60105be53a7c20248aabbaa721592b": "2026-07-01T01:18:50.737Z",
+    "e964c843fda311c0434406c39c8c2ddb8122610372e0b0889a31d623cc5a8b86": "2026-07-01T01:18:57.651Z",
+    "b7f09286b754b7a649d7b04ad0a628b8d3bd65825ba71e90df5179786361a187": "2026-07-01T01:19:10.734Z",
+    "376cecfcf3d3d9ce15e3cb83eb6ea3b9551c86127366260b96d4dfcc4c37038e": "2026-07-01T01:19:34.450Z"
+  },
+  "short_term": {
+    "topics": {
+      "AI新闻": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "eEdOqSmkZy0"
+        ],
+        "last_seen": "2026-07-01T01:18:25.049Z"
+      },
+      "技术事件": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "eEdOqSmkZy0"
+        ],
+        "last_seen": "2026-07-01T01:18:25.049Z"
+      },
+      "人物访谈": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "VuUvxCmSVf4"
+        ],
+        "last_seen": "2026-07-01T01:18:35.814Z"
+      },
+      "生命体验": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "VuUvxCmSVf4"
+        ],
+        "last_seen": "2026-07-01T01:18:35.814Z"
+      },
+      "AI创业": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "印度经济": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "AI监管": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "WkXuk8NlPAQ"
+        ],
+        "last_seen": "2026-07-01T01:18:57.651Z"
+      },
+      "政策": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "WkXuk8NlPAQ"
+        ],
+        "last_seen": "2026-07-01T01:18:57.651Z"
+      },
+      "社会现象": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "c7WfTprQ58U"
+        ],
+        "last_seen": "2026-07-01T01:19:10.734Z"
+      },
+      "技术故障": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "c7WfTprQ58U"
+        ],
+        "last_seen": "2026-07-01T01:19:10.734Z"
+      },
+      "美国政治": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "ihq_ngvKKmc"
+        ],
+        "last_seen": "2026-07-01T01:19:34.450Z"
+      },
+      "选举预测": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "ihq_ngvKKmc"
+        ],
+        "last_seen": "2026-07-01T01:19:34.450Z"
+      }
+    },
+    "formats": {
+      "评论分析": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "eEdOqSmkZy0"
+        ],
+        "last_seen": "2026-07-01T01:18:25.049Z"
+      },
+      "深度访谈": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "VuUvxCmSVf4"
+        ],
+        "last_seen": "2026-07-01T01:18:35.814Z"
+      },
+      "观点分析": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "新闻分析": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "WkXuk8NlPAQ"
+        ],
+        "last_seen": "2026-07-01T01:18:57.651Z"
+      },
+      "评论": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "c7WfTprQ58U"
+        ],
+        "last_seen": "2026-07-01T01:19:10.734Z"
+      },
+      "专家分析": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "ihq_ngvKKmc"
+        ],
+        "last_seen": "2026-07-01T01:19:34.450Z"
+      }
+    },
+    "values": {
+      "实时资讯": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "eEdOqSmkZy0"
+        ],
+        "last_seen": "2026-07-01T01:18:25.049Z"
+      },
+      "人生洞察": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "VuUvxCmSVf4"
+        ],
+        "last_seen": "2026-07-01T01:18:35.814Z"
+      },
+      "商业洞察": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "趋势分析": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "政策解读": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "WkXuk8NlPAQ"
+        ],
+        "last_seen": "2026-07-01T01:18:57.651Z"
+      },
+      "娱乐": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "c7WfTprQ58U"
+        ],
+        "last_seen": "2026-07-01T01:19:10.734Z"
+      },
+      "政治洞察": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "ihq_ngvKKmc"
+        ],
+        "last_seen": "2026-07-01T01:19:34.450Z"
+      }
+    },
+    "sources": {
+      "Matthew Berman": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "eEdOqSmkZy0"
+        ],
+        "last_seen": "2026-07-01T01:18:25.049Z"
+      },
+      "Chris Williamson": {
+        "net": -1.8,
+        "evidence_count": 2,
+        "content_ids": [
+          "VuUvxCmSVf4",
+          "c7WfTprQ58U"
+        ],
+        "last_seen": "2026-07-01T01:19:10.734Z"
+      },
+      "Y Combinator": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "Ju8LVdvuxGM"
+        ],
+        "last_seen": "2026-07-01T01:18:50.737Z"
+      },
+      "The AI Daily Brief": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "WkXuk8NlPAQ"
+        ],
+        "last_seen": "2026-07-01T01:18:57.651Z"
+      },
+      "All-In Podcast": {
+        "net": -0.9,
+        "evidence_count": 1,
+        "content_ids": [
+          "ihq_ngvKKmc"
+        ],
+        "last_seen": "2026-07-01T01:19:34.450Z"
+      }
+    }
+  },
+  "long_term": {
+    "topics": {},
+    "formats": {},
+    "values": {},
+    "sources": {}
+  },
+  "last_daily_run": "2026-07-02T02:00:42Z",
+  "last_weekly_run": "2026-06-29T02:00:38Z",
+  "weekly_snapshots": [
+    {
+      "created_at": "2026-06-29T02:00:38Z",
+      "long_term": {
+        "topics": {},
+        "formats": {},
+        "values": {},
+        "sources": {}
+      }
+    }
+  ]
+}

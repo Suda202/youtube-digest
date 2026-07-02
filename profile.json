@@ -1,0 +1,442 @@
+{
+  "description": "AI 产品经理，优先关注 AI 产品设计、用户体验、商业化、广告创意智能体、海外市场和产品策略；不主动追投资、股票、VC 视角或纯技术细节。",
+  "favorite_content": "少而精：AI 产品/UX/商业化案例、广告创意智能体与 AI 工作流、海外 SaaS 增长、产品策略与竞品分析、技术团队管理实践。偏好能转化为产品判断的高密度内容；只在直接影响产品策略时看少量技术趋势。",
+  "max_daily_videos": 3,
+  "preferred_channels": [
+    "Peter Yang",
+    "Lenny's Podcast",
+    "Hamel Husain",
+    "AI Engineer",
+    "Latent Space",
+    "OpenAI",
+    "Anthropic",
+    "Figma",
+    "Product Talk",
+    "Every",
+    "Intercom",
+    "Stripe",
+    "Greg Isenberg",
+    "Y Combinator",
+    "The Pragmatic Engineer",
+    "張小珺Xiaojùn Podcast"
+  ],
+  "exclude_title_patterns": [
+    "full course",
+    "full tutorial",
+    "tutorial for beginners",
+    "for beginners",
+    "beginner",
+    "getting started",
+    "从零开始",
+    "入门教程",
+    "coding tutorial",
+    "code along",
+    "hands-on",
+    "walkthrough",
+    "paper explained",
+    "paper reading",
+    "arxiv",
+    "implementation",
+    "from scratch",
+    "stock",
+    "stocks",
+    "portfolio",
+    "public markets",
+    "market update",
+    "investing",
+    "investment thesis",
+    "venture capital",
+    "fundraising",
+    "valuation",
+    "IPO",
+    "crypto",
+    "融资",
+    "估值",
+    "股票",
+    "基金",
+    "投融资",
+    "募资"
+  ],
+  "exclude_content_patterns": [
+    "stock picks",
+    "public markets",
+    "portfolio construction",
+    "investment strategy",
+    "investment memo",
+    "term sheet",
+    "cap table",
+    "fundraising announcement",
+    "venture capital firm",
+    "代码实现",
+    "逐行代码",
+    "from scratch implementation",
+    "paper reading",
+    "arXiv paper",
+    "model architecture",
+    "RAG pipeline",
+    "vector database tuning",
+    "CUDA",
+    "Kubernetes"
+  ],
+  "deprioritize_topics": [
+    "vc投资",
+    "投资分析",
+    "科技投资",
+    "融资",
+    "估值",
+    "股票",
+    "基金",
+    "宏观市场",
+    "public markets",
+    "venture capital",
+    "投资人圆桌",
+    "论文精读",
+    "paper reading",
+    "arxiv",
+    "代码实现",
+    "implementation",
+    "模型架构细节",
+    "architecture deep dive",
+    "框架/API 教程",
+    "RAG 调参",
+    "向量数据库调参",
+    "自动驾驶",
+    "无人驾驶",
+    "autonomous driving",
+    "self-driving",
+    "机器人",
+    "robotics",
+    "humanoid",
+    "具身智能"
+  ],
+  "deprioritize_channels": [
+    "a16z",
+    "Sequoia Capital",
+    "20VC",
+    "Invest Like The Best",
+    "Lightspeed Venture Partners",
+    "All-In Podcast",
+    "Acquired",
+    "硅谷101播客",
+    "Machine Learning Street Talk",
+    "Weights & Biases",
+    "LlamaIndex",
+    "LangChain",
+    "Weaviate",
+    "Stanford Online",
+    "DeepLearningAI",
+    "Daniel Bourke arXiv",
+    "Trelis Research",
+    "Efficient NLP",
+    "Umar Jamil"
+  ],
+  "channel_filters": {
+    "Figma": {
+      "min_duration_seconds": 600
+    },
+    "a16z": {
+      "require_title_keywords": [
+        "AI",
+        "agent",
+        "product",
+        "growth",
+        "go-to-market",
+        "SaaS",
+        "consumer",
+        "marketing",
+        "creative"
+      ],
+      "exclude_title_keywords": [
+        "fund",
+        "fundraising",
+        "valuation",
+        "IPO",
+        "public market",
+        "stock",
+        "crypto",
+        "venture capital",
+        "portfolio"
+      ]
+    },
+    "Sequoia": {
+      "require_title_keywords": [
+        "AI",
+        "agent",
+        "product",
+        "growth",
+        "go-to-market",
+        "SaaS",
+        "consumer",
+        "marketing",
+        "creative"
+      ],
+      "exclude_title_keywords": [
+        "fund",
+        "fundraising",
+        "valuation",
+        "IPO",
+        "public market",
+        "stock",
+        "crypto",
+        "venture capital",
+        "portfolio"
+      ]
+    },
+    "20VC": {
+      "require_title_keywords": [
+        "AI",
+        "product",
+        "growth",
+        "go-to-market",
+        "SaaS",
+        "marketing"
+      ],
+      "exclude_title_keywords": [
+        "fund",
+        "fundraising",
+        "valuation",
+        "IPO",
+        "public market",
+        "stock",
+        "crypto",
+        "venture capital",
+        "portfolio"
+      ]
+    },
+    "Invest Like The Best": {
+      "require_title_keywords": [
+        "AI",
+        "product",
+        "SaaS",
+        "consumer",
+        "growth"
+      ],
+      "exclude_title_keywords": [
+        "stock",
+        "investing",
+        "investment",
+        "portfolio",
+        "public market",
+        "capital allocation"
+      ]
+    },
+    "LlamaIndex": {
+      "require_title_keywords": [
+        "agent",
+        "workflow",
+        "product",
+        "case study",
+        "customer"
+      ],
+      "exclude_title_keywords": [
+        "tutorial",
+        "implementation",
+        "RAG",
+        "vector",
+        "embedding",
+        "retrieval",
+        "API",
+        "code",
+        "python",
+        "deploy"
+      ]
+    },
+    "LangChain": {
+      "require_title_keywords": [
+        "agent",
+        "workflow",
+        "product",
+        "case study",
+        "customer"
+      ],
+      "exclude_title_keywords": [
+        "tutorial",
+        "implementation",
+        "RAG",
+        "vector",
+        "embedding",
+        "retrieval",
+        "API",
+        "code",
+        "python",
+        "deploy"
+      ]
+    },
+    "Weaviate": {
+      "require_title_keywords": [
+        "product",
+        "case study",
+        "customer",
+        "AI app"
+      ],
+      "exclude_title_keywords": [
+        "tutorial",
+        "RAG",
+        "vector",
+        "embedding",
+        "retrieval",
+        "database",
+        "API",
+        "code",
+        "python"
+      ]
+    },
+    "Stanford Online": {
+      "require_title_keywords": [
+        "AI product",
+        "product",
+        "strategy",
+        "business",
+        "human-centered"
+      ],
+      "exclude_title_keywords": [
+        "lecture",
+        "course",
+        "homework",
+        "assignment",
+        "paper",
+        "algorithm"
+      ]
+    }
+  },
+  "channel_notes": {
+    "Figma": "只选大会/活动类内容（如 Config、Schema 大会、设计系统峰会等），日常教程、产品功能介绍、Shorts 不选",
+    "投资/VC 频道": "只在标题明确涉及 AI 产品、增长、GTM、SaaS、consumer、marketing 或 creative 时保留；基金、融资、估值、股票和 portfolio 类内容直接过滤",
+    "技术框架频道": "只保留产品化、客户案例和工作流视角；教程、代码实现、RAG/向量库/API 调参类内容直接过滤"
+  },
+  "inferred_preferences": {
+    "schema_version": 2,
+    "last_updated": "2026-07-02T02:00:42Z",
+    "recent": {
+      "topics": {
+        "AI新闻": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "技术事件": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "人物访谈": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "生命体验": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "AI创业": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "印度经济": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "AI监管": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "政策": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "社会现象": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "技术故障": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "美国政治": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "选举预测": {
+          "net": -0.9,
+          "evidence_count": 1
+        }
+      },
+      "formats": {
+        "评论分析": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "深度访谈": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "观点分析": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "新闻分析": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "评论": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "专家分析": {
+          "net": -0.9,
+          "evidence_count": 1
+        }
+      },
+      "values": {
+        "实时资讯": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "人生洞察": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "商业洞察": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "趋势分析": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "政策解读": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "娱乐": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "政治洞察": {
+          "net": -0.9,
+          "evidence_count": 1
+        }
+      },
+      "sources": {
+        "Matthew Berman": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "Chris Williamson": {
+          "net": -1.8,
+          "evidence_count": 2
+        },
+        "Y Combinator": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "The AI Daily Brief": {
+          "net": -0.9,
+          "evidence_count": 1
+        },
+        "All-In Podcast": {
+          "net": -0.9,
+          "evidence_count": 1
+        }
+      }
+    },
+    "stable": {}
+  }
+}
